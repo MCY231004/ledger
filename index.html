@@ -1,0 +1,2584 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="theme-color" content="#3b82f6">
+<title>Ledger — Personal Finance Tracker</title>
+<style>
+/* ============ DESIGN TOKENS ============ */
+:root{
+  --bg:#f6f8fb; --surface:#fff; --surface-2:#f1f5f9; --surface-3:#e2e8f0;
+  --border:#e5e9f0; --border-strong:#cbd5e1;
+  --text:#0f172a; --text-muted:#64748b; --text-subtle:#94a3b8;
+  --primary:#3b82f6; --primary-hover:#2563eb; --primary-soft:#dbeafe;
+  --spending:#3b82f6; --savings:#10b981; --cash:#f59e0b; --goal:#8b5cf6; --custom:#06b6d4;
+  --personal:#10b981; --passthrough:#64748b; --reimbursement:#06b6d4;
+  --transfer:#6366f1; --needs-review:#f97316; --danger:#ef4444; --warning:#f59e0b;
+  --positive:#10b981; --negative:#ef4444; --neutral:#64748b;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.05),0 1px 3px rgba(15,23,42,.07);
+  --shadow-md:0 4px 8px -2px rgba(15,23,42,.07),0 2px 6px -2px rgba(15,23,42,.05);
+  --shadow-lg:0 12px 24px -6px rgba(15,23,42,.12),0 4px 8px -4px rgba(15,23,42,.08);
+  --radius:14px; --radius-sm:10px; --radius-xs:6px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Roboto,sans-serif;
+  --mono:'SF Mono','Menlo','Consolas',monospace;
+}
+[data-theme="dark"]{
+  --bg:#0b1120; --surface:#1a2234; --surface-2:#243049; --surface-3:#2e3b58;
+  --border:#2a3650; --border-strong:#3b4968;
+  --text:#f1f5f9; --text-muted:#94a3b8; --text-subtle:#64748b;
+  --primary-soft:#1e3a5f;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow-md:0 4px 8px rgba(0,0,0,.4);
+  --shadow-lg:0 12px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font); background:var(--bg); color:var(--text);
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding-bottom:80px;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
+a{color:var(--primary);text-decoration:none}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ============ LAYOUT ============ */
+.app{max-width:1400px;margin:0 auto;padding:0 16px}
+@media(min-width:768px){.app{padding:0 24px}}
+
+/* Header */
+.header{
+  position:sticky; top:0; z-index:50; background:rgba(246,248,251,.85);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+}
+[data-theme="dark"] .header{background:rgba(11,17,32,.85)}
+.header-inner{
+  max-width:1400px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:16px;
+}
+@media(min-width:768px){.header-inner{padding:12px 24px}}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px}
+.brand-logo{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--spending),var(--savings));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;
+}
+.nav-tabs{display:none;gap:4px;margin-left:16px;flex:1}
+@media(min-width:900px){.nav-tabs{display:flex}}
+.nav-tab{
+  padding:8px 12px;border-radius:8px;color:var(--text-muted);font-weight:500;font-size:13px;
+  transition:all .15s;white-space:nowrap;
+}
+.nav-tab:hover{background:var(--surface-2);color:var(--text)}
+.nav-tab.active{background:var(--primary-soft);color:var(--primary)}
+.header-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.icon-btn{
+  width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  color:var(--text-muted);transition:all .15s;
+}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+
+/* Mobile nav */
+.mobile-nav{display:flex;overflow-x:auto;gap:4px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
+@media(min-width:900px){.mobile-nav{display:none}}
+.mobile-nav .nav-tab{flex-shrink:0;font-size:12px;padding:6px 10px}
+
+/* Main */
+.main{padding:20px 0 40px}
+.view{display:none;animation:fade .2s}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ============ CARDS ============ */
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+}
+.card-pad{padding:20px}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:between;gap:12px}
+.card-header h3{font-size:14px;font-weight:600}
+.section-title{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+
+/* ============ BUTTONS ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;
+  transition:all .15s;border:1px solid transparent;
+}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover)}
+.btn-secondary{background:var(--surface-2);color:var(--text);border-color:var(--border)}
+.btn-secondary:hover{background:var(--surface-3)}
+.btn-ghost{color:var(--text-muted)}
+.btn-ghost:hover{background:var(--surface-2);color:var(--text)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{opacity:.9}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-lg{padding:12px 20px;font-size:15px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-block{display:flex;width:100%}
+
+/* ============ FORMS ============ */
+.field{margin-bottom:12px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:500px){.field-row{grid-template-columns:1fr}}
+label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:4px}
+input,select,textarea{
+  width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;
+  background:var(--surface);transition:border-color .15s,box-shadow .15s;font-size:14px;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);
+}
+input[type="checkbox"],input[type="radio"]{width:auto}
+.help{font-size:11px;color:var(--text-subtle);margin-top:3px}
+
+/* ============ DASHBOARD ============ */
+.balance-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:20px}
+@media(min-width:600px){.balance-grid{grid-template-columns:2fr 1.4fr 1fr}}
+.balance-card{
+  padding:18px;border-radius:var(--radius);border:1px solid var(--border);position:relative;overflow:hidden;
+}
+.balance-card.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none}
+.balance-card.savings{background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none}
+.balance-card.total{background:var(--surface)}
+.balance-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;opacity:.85;margin-bottom:6px}
+.balance-amount{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+@media(min-width:768px){.balance-amount{font-size:34px}}
+.balance-sub{font-size:12px;opacity:.8;margin-top:4px}
+.balance-card.total .balance-amount{color:var(--text-subtle);font-size:22px}
+.balance-card.total .balance-label{color:var(--text-muted)}
+
+.quick-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+@media(min-width:600px){.quick-actions{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:900px){.quick-actions{grid-template-columns:repeat(4,1fr)}}
+.qa-btn{
+  padding:14px 12px;border-radius:var(--radius);border:1px solid var(--border);
+  background:var(--surface);text-align:left;transition:all .15s;display:flex;flex-direction:column;gap:4px;
+}
+.qa-btn:hover{border-color:var(--primary);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.qa-btn .qa-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:4px}
+.qa-btn .qa-title{font-size:13px;font-weight:600}
+.qa-btn .qa-desc{font-size:11px;color:var(--text-muted)}
+.qa-spending .qa-icon{background:var(--primary-soft);color:var(--primary)}
+.qa-save .qa-icon{background:#dcfce7;color:var(--savings)}
+.qa-back .qa-icon{background:#fef3c7;color:var(--cash)}
+.qa-spend-save .qa-icon{background:#fee2e2;color:var(--danger)}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(min-width:768px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+.stat-card{padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.stat-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.stat-value{font-size:18px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat-meta{font-size:11px;color:var(--text-subtle);margin-top:2px}
+
+/* ============ TABLE ============ */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:800px}
+thead th{
+  text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);
+  background:var(--surface-2);position:sticky;top:0;cursor:pointer;white-space:nowrap;
+}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+.amount-cell{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;white-space:nowrap}
+
+/* Status badges */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;
+  font-size:11px;font-weight:600;white-space:nowrap;
+}
+.badge-personal{background:#dcfce7;color:#15803d}
+.badge-passthrough{background:#f1f5f9;color:#475569}
+.badge-reimbursement{background:#cffafe;color:#0e7490}
+.badge-transfer{background:#e0e7ff;color:#4338ca}
+.badge-review{background:#ffedd5;color:#c2410c}
+.badge-unknown{background:#fef3c7;color:#a16207}
+.badge-reversed{background:#fee2e2;color:#b91c1c;text-decoration:line-through}
+.badge-income{background:#dcfce7;color:#15803d}
+.badge-expense{background:#fee2e2;color:#b91c1c}
+[data-theme="dark"] .badge-personal{background:rgba(16,185,129,.18);color:#34d399}
+[data-theme="dark"] .badge-passthrough{background:rgba(100,116,139,.18);color:#cbd5e1}
+[data-theme="dark"] .badge-reimbursement{background:rgba(6,182,212,.18);color:#22d3ee}
+[data-theme="dark"] .badge-transfer{background:rgba(99,102,241,.18);color:#818cf8}
+[data-theme="dark"] .badge-review{background:rgba(249,115,22,.18);color:#fb923c}
+[data-theme="dark"] .badge-unknown{background:rgba(245,158,11,.18);color:#fbbf24}
+[data-theme="dark"] .badge-reversed{background:rgba(239,68,68,.18);color:#f87171}
+
+/* Account chip */
+.account-chip{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;
+  font-size:11px;font-weight:600;background:var(--surface-2);
+}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+
+/* ============ MODAL ============ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(2px);
+  z-index:100;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;
+}
+.modal-overlay.active{display:flex}
+.modal{
+  background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);
+  width:100%;max-width:560px;margin:auto;animation:slideup .2s;
+}
+@keyframes slideup{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+.modal-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;
+}
+.modal-header h3{font-size:16px;font-weight:600}
+.modal-body{padding:20px;max-height:70vh;overflow-y:auto}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--surface-2);border-radius:0 0 var(--radius) var(--radius)}
+
+/* Type selector chips */
+.type-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.type-chip{
+  padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+}
+.type-chip:hover{border-color:var(--primary)}
+.type-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Quick amount buttons */
+.amount-quick{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.amount-quick button{
+  padding:4px 10px;border-radius:6px;background:var(--surface-2);font-size:12px;
+  border:1px solid var(--border);transition:all .15s;
+}
+.amount-quick button:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Advanced section */
+.advanced-toggle{
+  display:flex;align-items:center;gap:6px;padding:8px 0;color:var(--primary);font-size:13px;font-weight:500;
+}
+.advanced-section{display:none;padding-top:8px;border-top:1px dashed var(--border);margin-top:8px}
+.advanced-section.open{display:block}
+
+/* ============ FAB ============ */
+.fab{
+  position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;
+  background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(59,130,246,.4);z-index:40;font-size:28px;font-weight:300;
+  transition:transform .15s;
+}
+.fab:hover{transform:scale(1.05)}
+.fab:active{transform:scale(.95)}
+@media(min-width:900px){.fab{display:none}}
+
+/* ============ TOAST ============ */
+.toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{
+  background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;
+  box-shadow:var(--shadow-lg);animation:slideup .2s;max-width:90vw;
+}
+.toast.success{background:var(--positive);color:#fff}
+.toast.error{background:var(--danger);color:#fff}
+.toast.warning{background:var(--warning);color:#fff}
+
+/* ============ FILTERS ============ */
+.filter-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center}
+.filter-bar input,.filter-bar select{width:auto;min-width:120px;padding:7px 10px;font-size:12px}
+.search-input{flex:1;min-width:200px!important}
+
+/* ============ LIST ============ */
+.list{display:flex;flex-direction:column;gap:8px}
+.list-item{
+  padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);
+  display:flex;align-items:center;gap:12px;transition:all .15s;cursor:pointer;
+}
+.list-item:hover{border-color:var(--primary);box-shadow:var(--shadow-sm)}
+.list-item-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--surface-2)}
+.list-item-content{flex:1;min-width:0}
+.list-item-title{font-weight:600;font-size:14px}
+.list-item-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.list-item-meta{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.list-item-amount{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.list-item-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.list-item:hover .list-item-actions{opacity:1}
+@media(max-width:600px){.list-item-actions{opacity:1}}
+
+/* ============ EMPTY STATE ============ */
+.empty-state{padding:40px 20px;text-align:center;color:var(--text-muted)}
+.empty-state-icon{font-size:48px;opacity:.3;margin-bottom:12px}
+.empty-state-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px}
+.empty-state-desc{font-size:13px}
+
+/* ============ REPORTS ============ */
+.report-grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:768px){.report-grid{grid-template-columns:1fr 1fr}}
+.bar-chart{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:grid;grid-template-columns:120px 1fr 80px;align-items:center;gap:8px;font-size:12px}
+@media(max-width:500px){.bar-row{grid-template-columns:90px 1fr 70px}}
+.bar-track{height:18px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;transition:width .3s}
+.bar-label{color:var(--text-muted)}
+.bar-value{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+
+/* ============ PEOPLE/MERCHANT ============ */
+.entity-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:600px){.entity-grid{grid-template-columns:1fr 1fr}}
+.entity-card{padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;transition:all .15s}
+.entity-card:hover{border-color:var(--primary);box-shadow:var(--shadow-sm)}
+.entity-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.entity-avatar{width:36px;height:36px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;color:var(--text-muted)}
+.entity-name{font-weight:600;font-size:14px}
+.entity-type{font-size:11px;color:var(--text-subtle);text-transform:uppercase}
+.entity-stats{display:flex;gap:14px;margin-top:8px;font-size:12px}
+.entity-stat-label{color:var(--text-muted)}
+.entity-stat-value{font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ============ SETTINGS ============ */
+.settings-section{margin-bottom:24px}
+.settings-section h3{font-size:14px;font-weight:600;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:13px;font-weight:500}
+.setting-desc{font-size:12px;color:var(--text-muted);margin-top:2px;max-width:480px}
+
+/* ============ MONTH VIEW ============ */
+.month-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.month-nav .btn{padding:6px 10px}
+.month-title{font-size:18px;font-weight:700;flex:1;text-align:center}
+.month-stats-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:16px}
+@media(min-width:600px){.month-stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:900px){.month-stats-grid{grid-template-columns:repeat(4,1fr)}}
+.month-stat-card{padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.month-stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.month-stat-value{font-size:16px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.month-stat-value.positive{color:var(--positive)}
+.month-stat-value.negative{color:var(--negative)}
+
+/* ============ RECONCILIATION ============ */
+.review-queue-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px}
+.review-queue-item .review-actions{display:flex;gap:4px;flex-wrap:wrap}
+.review-actions button{padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--surface);transition:all .15s}
+.review-actions button:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* ============ SCROLLBAR ============ */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:5px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--border-strong)}
+
+/* Hidden helper */
+.hidden{display:none!important}
+.text-positive{color:var(--positive)}
+.text-negative{color:var(--negative)}
+.text-muted{color:var(--text-muted)}
+.text-subtle{color:var(--text-subtle)}
+.font-bold{font-weight:700}
+.font-sm{font-size:12px}
+.font-xs{font-size:11px}
+.flex{display:flex}
+.flex-1{flex:1}
+.gap-2{gap:8px}
+.gap-3{gap:12px}
+.items-center{align-items:center}
+.justify-between{justify-content:space-between}
+.mb-2{margin-bottom:8px}
+.mb-3{margin-bottom:12px}
+.mb-4{margin-bottom:16px}
+.mt-2{margin-top:8px}
+.mt-3{margin-top:12px}
+.mt-4{margin-top:16px}
+.flex-wrap{flex-wrap:wrap}
+
+/* Print */
+@media print{.header,.fab,.modal-overlay,.filter-bar,.nav-tabs,.mobile-nav{display:none!important}.main{padding:0}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-logo">L</div>
+      <span>Ledger</span>
+    </div>
+    <nav class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" data-view="dashboard">Dashboard</button>
+      <button class="nav-tab" data-view="transactions">Transactions</button>
+      <button class="nav-tab" data-view="months">Months</button>
+      <button class="nav-tab" data-view="savings">Savings</button>
+      <button class="nav-tab" data-view="people">People</button>
+      <button class="nav-tab" data-view="reports">Reports</button>
+      <button class="nav-tab" data-view="review">Review</button>
+      <button class="nav-tab" data-view="settings">Settings</button>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" id="themeToggle" title="Toggle theme">🌙</button>
+      <button class="icon-btn" id="exportBtn" title="Export data">⬇</button>
+      <button class="btn btn-primary btn-sm" id="addTxBtn">+ Add</button>
+    </div>
+  </div>
+</div>
+<nav class="mobile-nav" id="mobileNav">
+  <button class="nav-tab active" data-view="dashboard">Dashboard</button>
+  <button class="nav-tab" data-view="transactions">Transactions</button>
+  <button class="nav-tab" data-view="months">Months</button>
+  <button class="nav-tab" data-view="savings">Savings</button>
+  <button class="nav-tab" data-view="people">People</button>
+  <button class="nav-tab" data-view="reports">Reports</button>
+  <button class="nav-tab" data-view="review">Review</button>
+  <button class="nav-tab" data-view="settings">Settings</button>
+</nav>
+
+<div class="app">
+  <main class="main">
+    <!-- VIEWS RENDERED HERE -->
+    <div id="viewContainer"></div>
+  </main>
+</div>
+
+<button class="fab" id="fab" title="Add transaction">+</button>
+
+<!-- Transaction Modal -->
+<div class="modal-overlay" id="txModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="txModalTitle">Add Transaction</h3>
+      <button class="icon-btn" id="txModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="txModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="txModalCancel">Cancel</button>
+      <button class="btn btn-secondary" id="txDuplicateBtn" style="display:none">Duplicate</button>
+      <button class="btn btn-secondary" id="txReverseBtn" style="display:none">Reverse</button>
+      <button class="btn btn-danger" id="txDeleteBtn" style="display:none">Delete</button>
+      <button class="btn btn-primary" id="txSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3 id="confirmTitle">Confirm</h3><button class="icon-btn" id="confirmClose">✕</button></div>
+    <div class="modal-body" id="confirmBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Entity Modal (people/merchants/etc) -->
+<div class="modal-overlay" id="entityModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="entityModalTitle">Edit</h3><button class="icon-btn" id="entityModalClose">✕</button></div>
+    <div class="modal-body" id="entityModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="entityModalCancel">Cancel</button>
+      <button class="btn btn-danger" id="entityModalDelete" style="display:none">Delete</button>
+      <button class="btn btn-primary" id="entityModalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== FIREBASE (free cloud sync between your devices) =====
+     See the FIREBASE SYNC SETUP comment near the top of the script
+     below for the 5-minute setup you need to do once. ============ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+'use strict';
+
+/* ================= FIREBASE SYNC SETUP =================
+   One-time setup (free, ~5 min):
+   1. Go to https://console.firebase.google.com -> Add project (free,
+      you can decline Google Analytics) -> Continue -> Create project.
+   2. Left sidebar > Build > Realtime Database -> Create Database ->
+      pick any region -> start in "locked mode".
+   3. Still in Realtime Database, click the "Rules" tab, replace the
+      contents with the JSON below, and click Publish:
+      {
+        "rules": {
+          "ledger": {
+            "$uid": { ".read": "$uid === auth.uid", ".write": "$uid === auth.uid" }
+          }
+        }
+      }
+      (This means: only a signed-in session can read/write, and only
+      its own private folder — nobody else can touch your data.)
+   4. Left sidebar > Build > Authentication -> Get started -> under
+      "Sign-in method" enable "Anonymous". (No email/password needed —
+      it just gives your two devices a shared private ID if you use
+      the SAME sign-in, see step 6.)
+   5. Click the gear icon (top left) > Project settings > scroll to
+      "Your apps" > click the </> icon > give it any nickname >
+      Register app (skip hosting) > copy the "firebaseConfig" object
+      shown > paste its values into the placeholders directly below.
+   6. Save this file, then open the SAME file (with your filled-in
+      config) on both your phone and your laptop. Anonymous sign-in
+      creates a random ID per browser by default — to make phone and
+      laptop share the SAME data, after step 6 open this file once on
+      your laptop, open the browser console (F12), run:
+        firebase.auth().currentUser.uid
+      copy that value, and paste it into FIXED_UID below (replacing
+      null). Do this on both devices with the same value. That pins
+      both devices to the same private data folder permanently.
+========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBtI9sMwWPBNdoEQYlPEWAOfvty_TpFn8M",
+  authDomain: "ledger-0007.firebaseapp.com",
+  databaseURL: "https://ledger-0007-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ledger-0007",
+  appId: "1:441889062726:web:44219e03d340aad71def47"
+};
+const FIXED_UID = "4LthaF4Ex7YHeF5lgEYMYgYiAI53"; // pins both devices to the same private data folder
+
+let fbReady = false;
+let fbRefPath = null;
+let cloudSyncEnabled = false;
+let suppressNextCloudPush = false;
+
+try {
+  if (!firebaseConfig.apiKey.startsWith('PASTE_') && typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    cloudSyncEnabled = true;
+  }
+} catch (e) {
+  console.error('Firebase init failed, running local-only:', e);
+}
+
+function setSyncStatus(status) {
+  let el = document.getElementById('cloudSyncBadge');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cloudSyncBadge';
+    el.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:9999;padding:4px 10px;border-radius:999px;font:12px/1.4 system-ui,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:opacity .3s;';
+    document.body.appendChild(el);
+  }
+  if (!cloudSyncEnabled) {
+    el.textContent = 'Local only — cloud sync not set up';
+    el.style.background = '#e2e8f0'; el.style.color = '#475569';
+    return;
+  }
+  const map = {
+    syncing: ['Syncing…', '#fef3c7', '#92400e'],
+    synced: ['Synced ✓', '#dcfce7', '#166534'],
+    offline: ['Offline (saved locally)', '#fee2e2', '#991b1b'],
+  };
+  const [text, bg, color] = map[status] || map.offline;
+  el.textContent = text; el.style.background = bg; el.style.color = color;
+}
+
+function initCloudSync() {
+  if (!cloudSyncEnabled) { setSyncStatus('offline'); return; }
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) return;
+    const uidToUse = FIXED_UID || user.uid;
+    fbRefPath = 'ledger/' + uidToUse;
+    firebase.database().ref(fbRefPath).on('value', (snapshot) => {
+      const cloudData = snapshot.val();
+      fbReady = true;
+      if (cloudData) {
+        suppressNextCloudPush = true;
+        DB = normalizeDB(cloudData);
+        localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+        if (typeof render === 'function') render();
+      } else {
+        pushToCloud(); // nothing in the cloud yet — push what we have
+      }
+      setSyncStatus('synced');
+    }, (err) => {
+      console.error('Firebase read failed:', err);
+      setSyncStatus('offline');
+    });
+  });
+  firebase.auth().signInAnonymously().catch(err => {
+    console.error('Firebase auth failed:', err);
+    setSyncStatus('offline');
+  });
+}
+
+function pushToCloud() {
+  if (!cloudSyncEnabled || !fbReady || !fbRefPath) return;
+  if (suppressNextCloudPush) { suppressNextCloudPush = false; return; }
+  setSyncStatus('syncing');
+  firebase.database().ref(fbRefPath).set(DB)
+    .then(() => setSyncStatus('synced'))
+    .catch(err => { console.error('Firebase write failed:', err); setSyncStatus('offline'); });
+}
+/* ================= END FIREBASE SYNC SETUP ================= */
+
+/* ============================================================
+   PERSONAL FINANCE LEDGER — Single-file app
+   Accounting model: every transaction has a "personal effect"
+   that quantifies how it changes the user's *own* spendable money.
+   - Transfers between own accounts: personal effect = 0
+   - Pass-through received/paid: personal effect = 0
+   - Reimbursement: positive effect (restores prior outflow)
+   - Direct savings spend: negative effect (real expense)
+   Total money across own accounts only changes on:
+   income (+), expense (-), reimbursement (+/- net), adjustment.
+   ============================================================ */
+
+/* ---------- Tiny utils ---------- */
+const $ = (s, p = document) => p.querySelector(s);
+const $$ = (s, p = document) => Array.from(p.querySelectorAll(s));
+const uid = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const fmtDate = (d) => {
+  if (!d) return '';
+  const dt = (typeof d === 'string') ? new Date(d + 'T00:00:00') : new Date(d);
+  if (isNaN(dt)) return '';
+  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const monthKey = (iso) => iso.slice(0, 7);
+const monthLabel = (key) => {
+  const [y, m] = key.split('-');
+  const dt = new Date(Number(y), Number(m) - 1, 1);
+  return dt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+};
+const currentMonthKey = () => todayISO().slice(0, 7);
+const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- State & Storage ---------- */
+const STORE_KEY = 'pft_ledger_v1';
+
+const DEFAULTS = {
+  accounts: [
+    { id: 'acc_spending', name: 'Spending', type: 'spending', color: '#3b82f6', icon: '💳', archived: false },
+    { id: 'acc_savings',  name: 'Savings',  type: 'savings',  color: '#10b981', icon: '🏦', archived: false },
+    { id: 'acc_cash',     name: 'Cash',      type: 'cash',     color: '#f59e0b', icon: '💵', archived: false },
+  ],
+  categories: [
+    { id: 'cat_food',     name: 'Food',            color: '#ef4444', icon: '🍔', order: 1,  is_social: false },
+    { id: 'cat_drinks',   name: 'Drinks',           color: '#f59e0b', icon: '🥤', order: 2,  is_social: false },
+    { id: 'cat_friends',  name: 'Friends / Social', color: '#8b5cf6', icon: '👥', order: 3,  is_social: true  },
+    { id: 'cat_ent',      name: 'Entertainment',    color: '#ec4899', icon: '🎬', order: 4,  is_social: false },
+    { id: 'cat_snooker',  name: 'Snooker / Games',  color: '#06b6d4', icon: '🎱', order: 5,  is_social: true  },
+    { id: 'cat_books',    name: 'Books / Education',color: '#3b82f6', icon: '📚', order: 6,  is_social: false },
+    { id: 'cat_shopping', name: 'Shopping',         color: '#f97316', icon: '🛍', order: 7,  is_social: false },
+    { id: 'cat_grocery',  name: 'Groceries',        color: '#84cc16', icon: '🛒', order: 8,  is_social: false },
+    { id: 'cat_transport',name: 'Transport',        color: '#0ea5e9', icon: '🚌', order: 9,  is_social: false },
+    { id: 'cat_mobile',   name: 'Mobile / Phone',   color: '#6366f1', icon: '📱', order: 10, is_social: false },
+    { id: 'cat_family',   name: 'Family',           color: '#14b8a6', icon: '👨‍👩‍👧', order: 11, is_social: false },
+    { id: 'cat_househelp',name: 'Househelp',        color: '#a855f7', icon: '🧹', order: 12, is_social: false },
+    { id: 'cat_personal', name: 'Personal',         color: '#10b981', icon: '✨', order: 13, is_social: false },
+    { id: 'cat_misc',     name: 'Miscellaneous',    color: '#64748b', icon: '📦', order: 14, is_social: false },
+    { id: 'cat_unknown',  name: 'Unknown / Needs Review', color: '#f97316', icon: '❓', order: 15, is_social: false },
+  ],
+  // Transaction types — each defines its accounting behaviour
+  // personal_effect: 'negative' | 'positive' | 'zero'
+  // is_transfer: true if money moves between own accounts (requires to_account_id)
+  types: [
+    { id: 'expense',            label: 'Expense',                    personal_effect: 'negative', is_transfer: false, is_income: false, is_passthrough: false, color: '#ef4444', icon: '💸' },
+    { id: 'allowance',          label: 'Allowance / Income',          personal_effect: 'positive', is_transfer: false, is_income: true,  is_passthrough: false, color: '#10b981', icon: '💰' },
+    { id: 'other_income',       label: 'Other Personal Income',       personal_effect: 'positive', is_transfer: false, is_income: true,  is_passthrough: false, color: '#22c55e', icon: '🎁' },
+    { id: 'transfer_to_savings',label: 'Move to Savings',             personal_effect: 'zero',     is_transfer: true,  is_income: false, is_passthrough: false, color: '#10b981', icon: '📥' },
+    { id: 'return_from_savings',label: 'Bring Back From Savings',     personal_effect: 'zero',     is_transfer: true,  is_income: false, is_passthrough: false, color: '#f59e0b', icon: '📤' },
+    { id: 'transfer',           label: 'Transfer Between Accounts',   personal_effect: 'zero',     is_transfer: true,  is_income: false, is_passthrough: false, color: '#6366f1', icon: '🔁' },
+    { id: 'cash_withdrawal',    label: 'Cash Withdrawal',              personal_effect: 'zero',     is_transfer: true,  is_income: false, is_passthrough: false, color: '#f59e0b', icon: '🏧' },
+    { id: 'cash_deposit',       label: 'Cash Deposit',                personal_effect: 'zero',     is_transfer: true,  is_income: false, is_passthrough: false, color: '#84cc16', icon: '💵' },
+    { id: 'reimbursement_received', label: 'Reimbursement Received',  personal_effect: 'positive', is_transfer: false, is_income: true,  is_passthrough: false, color: '#06b6d4', icon: '↩️' },
+    { id: 'passthrough_received', label: 'Pass-through Money Received',personal_effect: 'zero',     is_transfer: false, is_income: false, is_passthrough: true,  color: '#64748b', icon: '🛅' },
+    { id: 'passthrough_payment', label: 'Pass-through Payment',       personal_effect: 'zero',     is_transfer: false, is_income: false, is_passthrough: true,  color: '#64748b', icon: '🛅' },
+    { id: 'spend_from_savings', label: 'Spend Directly From Savings', personal_effect: 'negative', is_transfer: false, is_income: false, is_passthrough: false, color: '#ef4444', icon: '🏦💸' },
+    { id: 'adjustment',         label: 'Adjustment / Correction',     personal_effect: 'zero',     is_transfer: false, is_income: false, is_passthrough: false, color: '#f97316', icon: '🔧' },
+  ],
+  people: [],
+  merchants: [],
+  transactions: [],
+  goals: [],
+  recurring: [],
+  // Per-month metadata: borrow flags, notes, labels
+  month_meta: {},
+  settings: {
+    currency: 'PKR',
+    currency_symbol: 'Rs',
+    currency_position: 'before',
+    month_start_day: 1,
+    overdraft_allowed: false,
+    dashboard: { show_total: true, show_passthrough: true, show_quick_actions: true },
+    visible_sections: { people: true, merchants: true, savings: true, reports: true, review: true },
+  },
+  meta: { version: 1, created: Date.now() },
+};
+
+let DB = null;
+
+function normalizeDB(parsed) {
+  // shallow merge to backfill new defaults AND anything Firebase stripped
+  // (Firebase Realtime Database silently drops empty arrays/objects on write)
+  const merged = Object.assign({}, DEFAULTS, parsed);
+  merged.settings = Object.assign({}, DEFAULTS.settings, parsed.settings || {});
+  merged.settings.dashboard = Object.assign({}, DEFAULTS.settings.dashboard, parsed.settings?.dashboard || {});
+  merged.settings.visible_sections = Object.assign({}, DEFAULTS.settings.visible_sections, parsed.settings?.visible_sections || {});
+  merged.meta = Object.assign({}, DEFAULTS.meta, parsed.meta || {});
+  // arrays: Firebase converts an array back to an object if items were removed
+  // from the middle, and drops the key entirely if it was empty. Force back to arrays.
+  ['accounts', 'categories', 'people', 'merchants', 'transactions'].forEach(key => {
+    if (merged[key] && !Array.isArray(merged[key])) merged[key] = Object.values(merged[key]);
+    if (!merged[key]) merged[key] = [];
+  });
+  return merged;
+}
+
+function loadDB() {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      DB = normalizeDB(parsed);
+      return;
+    } catch (e) {
+      console.error('Failed to parse stored DB, starting fresh:', e);
+    }
+  }
+  DB = JSON.parse(JSON.stringify(DEFAULTS));
+  seedSampleData();
+  saveDB();
+}
+
+function saveDB() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+  pushToCloud();
+}
+
+function resetDB() {
+  localStorage.removeItem(STORE_KEY);
+  DB = JSON.parse(JSON.stringify(DEFAULTS));
+  saveDB();
+}
+
+/* ---------- Currency / format ---------- */
+function fmtMoney(amount, withSymbol = true) {
+  const n = Number(amount || 0);
+  const abs = Math.abs(n);
+  const formatted = abs.toLocaleString('en-PK', { maximumFractionDigits: 0 });
+  const sign = n < 0 ? '-' : '';
+  const sym = DB.settings.currency_symbol;
+  const pos = DB.settings.currency_position;
+  if (!withSymbol) return sign + formatted;
+  return pos === 'after' ? `${sign}${formatted} ${sym}` : `${sign}${sym} ${formatted}`;
+}
+
+/* ============================================================
+   ACCOUNTING ENGINE
+   ============================================================ */
+
+// Returns the signed change a transaction applies to a specific account.
+// IMPORTANT: account balance changes whenever money enters or leaves the account,
+// regardless of "personal effect". Pass-through money changes the account balance
+// (it physically enters/leaves) but has zero personal effect.
+function accountDeltaFor(tx, accountId) {
+  if (tx.reversed && !tx._is_reversal) return 0;
+  let d = 0;
+  const type = DB.types.find(t => t.id === tx.type);
+  if (!type) return 0;
+
+  // Money physically entering the primary account
+  const isInflow = ['allowance', 'other_income', 'reimbursement_received', 'passthrough_received'].includes(tx.type);
+  // Money physically leaving the primary account
+  const isOutflow = ['expense', 'passthrough_payment', 'spend_from_savings'].includes(tx.type);
+
+  if (tx.account_id === accountId) {
+    if (type.is_transfer) {
+      d -= tx.amount;  // money leaving the "from" account
+    } else if (tx.type === 'adjustment') {
+      d += Number(tx.adjustment_amount || 0);
+    } else if (isInflow) {
+      d += tx.amount;
+    } else if (isOutflow) {
+      d -= tx.amount;
+    }
+  }
+  // Destination account (for transfers only)
+  if (type.is_transfer && tx.to_account_id === accountId) {
+    d += tx.amount;
+  }
+  return d;
+}
+
+// Personal effect: how much this transaction changes the user's own spendable money
+function personalEffect(tx) {
+  if (tx.reversed && !tx._is_reversal) return 0;
+  const type = DB.types.find(t => t.id === tx.type);
+  if (!type) return 0;
+  if (tx.type === 'adjustment') return Number(tx.adjustment_personal || 0);
+  const map = { 'negative': -tx.amount, 'positive': +tx.amount, 'zero': 0 };
+  return map[type.personal_effect] || 0;
+}
+
+// Apply personal_effect_signed to each tx at load time
+function enrichTransaction(tx) {
+  tx.personal_effect_signed = personalEffect(tx);
+  return tx;
+}
+
+// Account balance computed purely from transactions (source of truth)
+function accountBalance(accountId) {
+  let bal = 0;
+  for (const tx of DB.transactions) {
+    bal += accountDeltaFor(enrichTransaction(tx), accountId);
+  }
+  return bal;
+}
+
+function totalBalance() {
+  return DB.accounts.filter(a => !a.archived).reduce((s, a) => s + accountBalance(a.id), 0);
+}
+
+// Stats for a given month (YYYY-MM)
+function monthStats(monthKey) {
+  const txs = DB.transactions.filter(t => !t.reversed && t.date.slice(0, 7) === monthKey);
+  let personal_income = 0;        // allowance + other_income + reimbursements
+  let allowance = 0;
+  let other_income = 0;
+  let reimbursements_received = 0;
+  let passthrough_received = 0;
+  let passthrough_paid = 0;
+  let personal_spending = 0;
+  let savings_in = 0;             // transfers TO savings
+  let savings_out = 0;            // transfers FROM savings (return only, not spend)
+  let spent_from_savings = 0;
+  let transfers_other = 0;
+  let adjustments_net = 0;
+
+  for (const t of txs) {
+    enrichTransaction(t);
+    switch (t.type) {
+      case 'allowance':            personal_income += t.amount; allowance += t.amount; break;
+      case 'other_income':         personal_income += t.amount; other_income += t.amount; break;
+      case 'reimbursement_received': personal_income += t.amount; reimbursements_received += t.amount; break;
+      case 'passthrough_received': passthrough_received += t.amount; break;
+      case 'passthrough_payment':  passthrough_paid += t.amount; break;
+      case 'expense':              personal_spending += t.amount; break;
+      case 'spend_from_savings':   spent_from_savings += t.amount; personal_spending += t.amount; break;
+      case 'transfer_to_savings':  savings_in += t.amount; break;
+      case 'return_from_savings':  savings_out += t.amount; break;
+      case 'transfer':             transfers_other += t.amount; break;
+      case 'cash_withdrawal':
+      case 'cash_deposit':         transfers_other += t.amount; break;
+      case 'adjustment':           adjustments_net += Number(t.adjustment_personal || 0); break;
+    }
+  }
+  return {
+    personal_income, allowance, other_income, reimbursements_received,
+    passthrough_received, passthrough_paid, personal_spending,
+    savings_in, savings_out, spent_from_savings, transfers_other, adjustments_net,
+  };
+}
+
+// Opening balance = total of all transactions BEFORE this month
+function openingBalance(monthKey) {
+  let bal = 0;
+  for (const tx of DB.transactions) {
+    if (tx.reversed) continue;
+    if (tx.date.slice(0, 7) < monthKey) {
+      bal += personalEffect(tx);
+    }
+  }
+  return bal;
+}
+
+// List all months that have any transaction
+function allMonths() {
+  const set = new Set();
+  DB.transactions.forEach(t => set.add(t.date.slice(0, 7)));
+  set.add(currentMonthKey());
+  return Array.from(set).sort().reverse();
+}
+
+/* ============================================================
+   LOOKUP HELPERS
+   ============================================================ */
+function getAccount(id) { return DB.accounts.find(a => a.id === id); }
+function getPerson(id) { return DB.people.find(p => p.id === id); }
+function getMerchant(id) { return DB.merchants.find(m => m.id === id); }
+function getCategory(id) { return DB.categories.find(c => c.id === id); }
+function getType(id) { return DB.types.find(t => t.id === id); }
+
+function findOrCreatePerson(name) {
+  if (!name) return null;
+  const trimmed = name.trim();
+  let p = DB.people.find(x => x.name.toLowerCase() === trimmed.toLowerCase());
+  if (!p) {
+    p = { id: uid(), name: trimmed, type: 'other', notes: '', created: Date.now() };
+    DB.people.push(p);
+  }
+  return p;
+}
+function findOrCreateMerchant(name) {
+  if (!name) return null;
+  const trimmed = name.trim();
+  let m = DB.merchants.find(x => x.name.toLowerCase() === trimmed.toLowerCase());
+  if (!m) {
+    m = { id: uid(), name: trimmed, category_id: null, created: Date.now() };
+    DB.merchants.push(m);
+  }
+  return m;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+function toast(msg, type = 'default') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  $('#toastContainer').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; setTimeout(() => el.remove(), 200); }, 2600);
+}
+
+/* ============================================================
+   CONFIRM MODAL
+   ============================================================ */
+function confirmAction(title, bodyHTML, onConfirm, opts = {}) {
+  $('#confirmTitle').textContent = title;
+  $('#confirmBody').innerHTML = bodyHTML;
+  const okBtn = $('#confirmOk');
+  okBtn.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+  okBtn.textContent = opts.okLabel || 'Confirm';
+  $('#confirmModal').classList.add('active');
+  const cleanup = () => {
+    $('#confirmModal').classList.remove('active');
+    okBtn.onclick = null;
+    $('#confirmCancel').onclick = null;
+    $('#confirmClose').onclick = null;
+  };
+  okBtn.onclick = () => { cleanup(); onConfirm(); };
+  $('#confirmCancel').onclick = cleanup;
+  $('#confirmClose').onclick = cleanup;
+}
+$('#confirmCancel').onclick = () => $('#confirmModal').classList.remove('active');
+$('#confirmClose').onclick = () => $('#confirmModal').classList.remove('active');
+
+/* ============================================================
+   SAMPLE DATA
+   Demonstrates: allowance, savings transfer, friend pass-through,
+   group purchase, dad reimbursement, househelp payment, transfer,
+   spend from savings, bring back from savings.
+   ============================================================ */
+function seedSampleData() {
+  // Intentionally left blank — no demo data. A fresh install starts
+  // with just the structural defaults (accounts/categories) and
+  // nothing else: no people, merchants, transactions, goals, or
+  // recurring rules.
+}
+
+/* ============================================================
+   VIEW ROUTER
+   ============================================================ */
+const views = {};
+function render() {
+  const active = $('#viewContainer').dataset.view || 'dashboard';
+  const fn = views[active];
+  if (fn) $('#viewContainer').innerHTML = fn();
+  else $('#viewContainer').innerHTML = views.dashboard();
+  // update nav state
+  $$('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === active));
+  bindViewEvents();
+}
+function navigate(view) {
+  $('#viewContainer').dataset.view = view;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function bindViewEvents() {
+  // bound per render in view fns via inline onclick / data attributes
+}
+
+/* ============================================================
+   DASHBOARD VIEW
+   ============================================================ */
+views.dashboard = () => {
+  const spendingBal = accountBalance('acc_spending');
+  const savingsBal = accountBalance('acc_savings');
+  const cashBal = accountBalance('acc_cash');
+  const total = totalBalance();
+  const mk = currentMonthKey();
+  const ms = monthStats(mk);
+  const needsReview = DB.transactions.filter(t => t.status === 'needs_review' && !t.reversed).length;
+
+  return `
+    <div class="balance-grid">
+      <div class="balance-card primary">
+        <div class="balance-label">Available to Spend (Spending)</div>
+        <div class="balance-amount mono">${fmtMoney(spendingBal)}</div>
+        <div class="balance-sub">Your freely spendable money</div>
+      </div>
+      <div class="balance-card savings">
+        <div class="balance-label">Savings</div>
+        <div class="balance-amount mono">${fmtMoney(savingsBal)}</div>
+        <div class="balance-sub">Visually separate — do not spend casually</div>
+      </div>
+      <div class="balance-card total">
+        <div class="balance-label">Total Across Accounts</div>
+        <div class="balance-amount mono">${fmtMoney(total)}</div>
+        <div class="balance-sub">Reference only — not all spendable</div>
+        <div class="balance-sub mt-3" style="display:flex;gap:8px;flex-wrap:wrap">
+          ${DB.accounts.filter(a => !a.archived && a.type !== 'spending' && a.type !== 'savings').map(a => `
+            <span class="account-chip"><span class="dot" style="background:${a.color}"></span>${escapeHtml(a.name)}: ${fmtMoney(accountBalance(a.id), false)}</span>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <button class="qa-btn qa-spending" onclick="openTxModal({type:'expense'})">
+        <div class="qa-icon">💸</div>
+        <div class="qa-title">Add Expense</div>
+        <div class="qa-desc">Personal spend</div>
+      </button>
+      <button class="qa-btn qa-save" onclick="openTxModal({type:'transfer_to_savings'})">
+        <div class="qa-icon">📥</div>
+        <div class="qa-title">Move to Savings</div>
+        <div class="qa-desc">Spending → Savings</div>
+      </button>
+      <button class="qa-btn qa-back" onclick="openTxModal({type:'return_from_savings'})">
+        <div class="qa-icon">📤</div>
+        <div class="qa-title">Bring Back From Savings</div>
+        <div class="qa-desc">Savings → Spending</div>
+      </button>
+      <button class="qa-btn qa-spend-save" onclick="openTxModal({type:'spend_from_savings'})">
+        <div class="qa-icon">🏦</div>
+        <div class="qa-title">Spend From Savings</div>
+        <div class="qa-desc">Direct expense</div>
+      </button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Personal Income (${monthLabel(mk).split(' ')[0]})</div>
+        <div class="stat-value text-positive mono">${fmtMoney(ms.personal_income)}</div>
+        <div class="stat-meta">Allowance ${fmtMoney(ms.allowance, false)} · Other ${fmtMoney(ms.other_income, false)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Personal Spending (${monthLabel(mk).split(' ')[0]})</div>
+        <div class="stat-value text-negative mono">${fmtMoney(ms.personal_spending)}</div>
+        <div class="stat-meta">From savings: ${fmtMoney(ms.spent_from_savings, false)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pass-through Money</div>
+        <div class="stat-value mono" style="color:var(--neutral)">${fmtMoney(ms.passthrough_received)}</div>
+        <div class="stat-meta">In: ${fmtMoney(ms.passthrough_received, false)} · Out: ${fmtMoney(ms.passthrough_paid, false)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Reimbursements Received</div>
+        <div class="stat-value mono" style="color:var(--reimbursement)">${fmtMoney(ms.reimbursements_received)}</div>
+        <div class="stat-meta">${needsReview > 0 ? `<a href="#" onclick="navigate('review');return false" style="color:var(--needs-review)">${needsReview} needs review →</a>` : 'All reviewed ✓'}</div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header" style="justify-content:space-between">
+        <h3>Recent Transactions</h3>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('transactions')">View all →</button>
+      </div>
+      <div class="table-wrap" style="border:none;border-radius:0">
+        ${renderTransactionsTable(DB.transactions.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0, 8))}
+      </div>
+    </div>
+  `;
+};
+
+/* ============================================================
+   TRANSACTIONS VIEW
+   ============================================================ */
+let txFilter = { search: '', type: '', account: '', category: '', person: '', merchant: '', tag: '', status: '', from: '', to: '' };
+let txSort = { field: 'date', dir: 'desc' };
+
+views.transactions = () => {
+  const filtered = applyTxFilter();
+  return `
+    <div class="card mb-4">
+      <div class="card-pad">
+        <div class="filter-bar">
+          <input type="text" class="search-input" id="txSearch" placeholder="Search notes, titles, tags…" value="${escapeHtml(txFilter.search)}" oninput="txFilter.search=this.value; refreshTxList()">
+          <select id="txTypeFilter" onchange="txFilter.type=this.value; refreshTxList()">
+            <option value="">All types</option>
+            ${DB.types.map(t => `<option value="${t.id}" ${txFilter.type===t.id?'selected':''}>${escapeHtml(t.label)}</option>`).join('')}
+          </select>
+          <select onchange="txFilter.account=this.value; refreshTxList()">
+            <option value="">All accounts</option>
+            ${DB.accounts.map(a => `<option value="${a.id}" ${txFilter.account===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}
+          </select>
+          <select onchange="txFilter.category=this.value; refreshTxList()">
+            <option value="">All categories</option>
+            ${DB.categories.map(c => `<option value="${c.id}" ${txFilter.category===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+          </select>
+          <select onchange="txFilter.person=this.value; refreshTxList()">
+            <option value="">All people</option>
+            ${DB.people.map(p => `<option value="${p.id}" ${txFilter.person===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
+          <select onchange="txFilter.status=this.value; refreshTxList()">
+            <option value="">All status</option>
+            <option value="reviewed" ${txFilter.status==='reviewed'?'selected':''}>Reviewed</option>
+            <option value="needs_review" ${txFilter.status==='needs_review'?'selected':''}>Needs review</option>
+            <option value="unknown" ${txFilter.status==='unknown'?'selected':''}>Unknown</option>
+          </select>
+          <input type="date" id="txFrom" value="${txFilter.from}" onchange="txFilter.from=this.value; refreshTxList()" title="From date">
+          <input type="date" id="txTo" value="${txFilter.to}" onchange="txFilter.to=this.value; refreshTxList()" title="To date">
+          <button class="btn btn-ghost btn-sm" onclick="clearTxFilter()">Clear</button>
+        </div>
+        <div class="flex gap-2 items-center font-sm text-muted">
+          <span><strong>${filtered.length}</strong> of ${DB.transactions.length} transactions</span>
+          <span>·</span>
+          <span>Total effect: <strong class="${personalEffectSum(filtered)>=0?'text-positive':'text-negative'}">${fmtMoney(personalEffectSum(filtered))}</strong></span>
+        </div>
+      </div>
+    </div>
+    <div id="txListContainer">
+      ${renderTransactionsTable(filtered)}
+    </div>
+  `;
+};
+
+function applyTxFilter() {
+  return DB.transactions.filter(t => {
+    if (txFilter.type && t.type !== txFilter.type) return false;
+    if (txFilter.account && t.account_id !== txFilter.account && t.to_account_id !== txFilter.account) return false;
+    if (txFilter.category && t.category_id !== txFilter.category) return false;
+    if (txFilter.person && t.person_id !== txFilter.person) return false;
+    if (txFilter.status && t.status !== txFilter.status) return false;
+    if (txFilter.from && t.date < txFilter.from) return false;
+    if (txFilter.to && t.date > txFilter.to) return false;
+    if (txFilter.search) {
+      const q = txFilter.search.toLowerCase();
+      const hay = [t.title, t.notes, (t.tags||[]).join(' ')].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a, b) => txSort.dir === 'desc' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
+}
+
+function personalEffectSum(txs) {
+  return txs.reduce((s, t) => s + personalEffect(enrichTransaction(t)), 0);
+}
+
+function clearTxFilter() {
+  txFilter = { search: '', type: '', account: '', category: '', person: '', merchant: '', tag: '', status: '', from: '', to: '' };
+  refreshTxList();
+}
+
+function refreshTxList() {
+  if ($('#viewContainer').dataset.view !== 'transactions') return;
+  const filtered = applyTxFilter();
+  const c = $('#txListContainer');
+  if (c) c.innerHTML = renderTransactionsTable(filtered);
+}
+
+function renderTransactionsTable(txs) {
+  if (!txs.length) {
+    return `<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">No transactions</div><div class="empty-state-desc">Use the + button to add one</div></div>`;
+  }
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Note</th>
+            <th>Account</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Person/Merchant</th>
+            <th class="amount-cell">Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${txs.map(renderTxRow).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderTxRow(t) {
+  enrichTransaction(t);
+  const type = getType(t.type) || { label: t.type, icon: '?', color: '#999' };
+  const acc = getAccount(t.account_id);
+  const toAcc = t.to_account_id ? getAccount(t.to_account_id) : null;
+  const cat = t.category_id ? getCategory(t.category_id) : null;
+  const person = t.person_id ? getPerson(t.person_id) : null;
+  const merchant = t.merchant_id ? getMerchant(t.merchant_id) : null;
+  const statusBadge = renderStatusBadge(t);
+  const isReversed = t.reversed;
+  const personalAmt = personalEffect(t);
+  const amountDisplay = type.is_transfer
+    ? `${fmtMoney(t.amount, false)} → ${toAcc ? escapeHtml(toAcc.name) : '?'}`
+    : (personalAmt > 0 ? `+${fmtMoney(t.amount, false)}` : personalAmt < 0 ? `-${fmtMoney(t.amount, false)}` : fmtMoney(t.amount, false));
+  const amountColor = personalAmt > 0 ? 'var(--positive)' : personalAmt < 0 ? 'var(--negative)' : 'var(--neutral)';
+
+  return `
+    <tr ${isReversed ? 'style="opacity:.5"' : ''} onclick="openTxModal({id:'${t.id}'})" style="cursor:pointer">
+      <td class="font-sm text-muted">${fmtDate(t.date)}</td>
+      <td>
+        <div class="font-bold">${escapeHtml(t.title)} ${isReversed ? '<span class="badge badge-reversed">reversed</span>' : ''}</div>
+        ${t.tags && t.tags.length ? `<div class="font-xs text-subtle mt-2">${t.tags.map(tag => `<span class="account-chip">#${escapeHtml(tag)}</span>`).join(' ')}</div>` : ''}
+        ${t.notes ? `<div class="font-xs text-subtle mt-2">${escapeHtml(t.notes)}</div>` : ''}
+      </td>
+      <td>
+        ${acc ? `<span class="account-chip"><span class="dot" style="background:${acc.color}"></span>${escapeHtml(acc.name)}</span>` : '—'}
+      </td>
+      <td><span class="badge" style="background:${type.color}22;color:${type.color}">${type.icon} ${escapeHtml(type.label)}</span></td>
+      <td>${cat ? `<span class="font-sm">${cat.icon} ${escapeHtml(cat.name)}</span>` : '<span class="text-subtle">—</span>'}</td>
+      <td>
+        ${person ? `<div class="font-sm">👤 ${escapeHtml(person.name)}</div>` : ''}
+        ${merchant ? `<div class="font-sm text-muted">🏪 ${escapeHtml(merchant.name)}</div>` : ''}
+        ${!person && !merchant ? '<span class="text-subtle">—</span>' : ''}
+      </td>
+      <td class="amount-cell mono" style="color:${amountColor}">${amountDisplay}</td>
+      <td>${statusBadge}</td>
+    </tr>
+  `;
+}
+
+function renderStatusBadge(t) {
+  const type = getType(t.type);
+  if (t.reversed) return '<span class="badge badge-reversed">Reversed</span>';
+  if (t.status === 'needs_review') return '<span class="badge badge-review">⚠ Needs review</span>';
+  if (t.status === 'unknown') return '<span class="badge badge-unknown">Unknown</span>';
+  if (t.type === 'passthrough_received' || t.type === 'passthrough_payment') return '<span class="badge badge-passthrough">Pass-through</span>';
+  if (t.type === 'reimbursement_received') return '<span class="badge badge-reimbursement">Reimbursement</span>';
+  if (type && type.is_transfer) return '<span class="badge badge-transfer">Transfer</span>';
+  if (type && type.is_income) return '<span class="badge badge-income">Personal income</span>';
+  if (t.type === 'expense' || t.type === 'spend_from_savings') return '<span class="badge badge-expense">Personal spend</span>';
+  return '<span class="badge badge-personal">Personal</span>';
+}
+
+/* ============================================================
+   MONTHS VIEW
+   ============================================================ */
+let selectedMonth = currentMonthKey();
+
+views.months = () => {
+  const months = allMonths();
+  if (!months.includes(selectedMonth)) selectedMonth = months[0] || currentMonthKey();
+  const ms = monthStats(selectedMonth);
+  const opening = openingBalance(selectedMonth);
+  const closing = opening + ms.personal_income - ms.personal_spending + ms.adjustments_net;
+  const meta = DB.month_meta[selectedMonth] || {};
+  const txsThisMonth = DB.transactions.filter(t => !t.reversed && t.date.slice(0,7) === selectedMonth).sort((a,b)=>b.date.localeCompare(a.date));
+  const borrowedFromNext = meta.borrow_from_next || 0;
+  const availableThisMonth = opening + ms.personal_income - ms.personal_spending + borrowedFromNext + ms.adjustments_net;
+
+  return `
+    <div class="card mb-4">
+      <div class="card-pad">
+        <div class="month-nav">
+          <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">← Prev</button>
+          <div class="month-title">${monthLabel(selectedMonth)}</div>
+          <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">Next →</button>
+        </div>
+        <div class="flex gap-2 items-center font-sm text-muted" style="justify-content:center">
+          <span>Opening: <strong class="mono ${opening>=0?'text-positive':'text-negative'}">${fmtMoney(opening)}</strong></span>
+          <span>→</span>
+          <span>Closing: <strong class="mono ${closing>=0?'text-positive':'text-negative'}">${fmtMoney(closing)}</strong></span>
+          ${borrowedFromNext ? `<span>·</span><span class="badge badge-review">Borrowed from next: ${fmtMoney(borrowedFromNext, false)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="month-stats-grid">
+      <div class="month-stat-card">
+        <div class="month-stat-label">Personal Income</div>
+        <div class="month-stat-value positive mono">${fmtMoney(ms.personal_income)}</div>
+        <div class="font-xs text-muted mt-2">Allowance ${fmtMoney(ms.allowance,false)} · Other ${fmtMoney(ms.other_income,false)} · Reimburse ${fmtMoney(ms.reimbursements_received,false)}</div>
+      </div>
+      <div class="month-stat-card">
+        <div class="month-stat-label">Personal Spending</div>
+        <div class="month-stat-value negative mono">${fmtMoney(ms.personal_spending)}</div>
+        <div class="font-xs text-muted mt-2">From savings: ${fmtMoney(ms.spent_from_savings,false)}</div>
+      </div>
+      <div class="month-stat-card">
+        <div class="month-stat-label">Pass-through Money</div>
+        <div class="month-stat-value mono" style="color:var(--neutral)">${fmtMoney(ms.passthrough_received - ms.passthrough_paid)}</div>
+        <div class="font-xs text-muted mt-2">In ${fmtMoney(ms.passthrough_received,false)} · Out ${fmtMoney(ms.passthrough_paid,false)}</div>
+      </div>
+      <div class="month-stat-card">
+        <div class="month-stat-label">Savings Movement</div>
+        <div class="month-stat-value mono" style="color:var(--savings)">${fmtMoney(ms.savings_in - ms.savings_out)}</div>
+        <div class="font-xs text-muted mt-2">In ${fmtMoney(ms.savings_in,false)} · Out ${fmtMoney(ms.savings_out,false)}</div>
+      </div>
+      <div class="month-stat-card">
+        <div class="month-stat-label">Available This Month</div>
+        <div class="month-stat-value mono ${availableThisMonth>=0?'positive':'negative'}">${fmtMoney(availableThisMonth)}</div>
+        <div class="font-xs text-muted mt-2">Opening + Income − Spending ${borrowedFromNext?'+ Borrowed':''}</div>
+      </div>
+      <div class="month-stat-card">
+        <div class="month-stat-label">Net Change</div>
+        <div class="month-stat-value mono ${(closing-opening)>=0?'positive':'negative'}">${(closing-opening)>=0?'+':'-'}${fmtMoney(Math.abs(closing-opening),false)}</div>
+        <div class="font-xs text-muted mt-2">Closing − Opening</div>
+      </div>
+      <div class="month-stat-card">
+        <div class="month-stat-label">Transactions</div>
+        <div class="month-stat-value mono">${txsThisMonth.length}</div>
+        <div class="font-xs text-muted mt-2">${txsThisMonth.filter(t=>t.status==='needs_review').length} need review</div>
+      </div>
+      <div class="month-stat-card">
+        <div class="month-stat-label">Adjustments</div>
+        <div class="month-stat-value mono" style="color:var(--neutral)">${fmtMoney(ms.adjustments_net)}</div>
+        <div class="font-xs text-muted mt-2">Manual corrections</div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-pad">
+        <h3 class="section-title">Month metadata</h3>
+        <div class="field-row">
+          <div class="field">
+            <label>Borrowed from next month (Rs)</label>
+            <input type="number" id="borrowInput" value="${borrowedFromNext}" onchange="updateMonthMeta('borrow_from_next', Number(this.value)||0)" placeholder="0">
+            <div class="help">If expenses exceeded income this month, you can record the deficit as borrowed from a future month's allowance.</div>
+          </div>
+          <div class="field">
+            <label>Month note</label>
+            <input type="text" id="monthNoteInput" value="${escapeHtml(meta.note || '')}" onchange="updateMonthMeta('note', this.value)" placeholder="e.g. exams month">
+            <div class="help">Optional label for this month</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>${monthLabel(selectedMonth)} — Transactions (${txsThisMonth.length})</h3></div>
+      ${renderTransactionsTable(txsThisMonth)}
+    </div>
+  `;
+};
+
+function changeMonth(delta) {
+  const [y, m] = selectedMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  selectedMonth = d.toISOString().slice(0, 7);
+  render();
+}
+
+function updateMonthMeta(key, value) {
+  if (!DB.month_meta[selectedMonth]) DB.month_meta[selectedMonth] = {};
+  DB.month_meta[selectedMonth][key] = value;
+  saveDB();
+  toast('Month metadata saved', 'success');
+}
+
+/* ============================================================
+   SAVINGS VIEW
+   ============================================================ */
+views.savings = () => {
+  const savingsBal = accountBalance('acc_savings');
+  const totalIn = DB.transactions.filter(t=>!t.reversed && t.type==='transfer_to_savings').reduce((s,t)=>s+t.amount,0);
+  const totalOut = DB.transactions.filter(t=>!t.reversed && (t.type==='return_from_savings')).reduce((s,t)=>s+t.amount,0);
+  const spentDirect = DB.transactions.filter(t=>!t.reversed && t.type==='spend_from_savings').reduce((s,t)=>s+t.amount,0);
+  const history = DB.transactions.filter(t => !t.reversed && ['transfer_to_savings','return_from_savings','spend_from_savings'].includes(t.type)).sort((a,b)=>b.date.localeCompare(a.date));
+
+  return `
+    <div class="balance-grid" style="grid-template-columns:1fr 1fr">
+      <div class="balance-card savings">
+        <div class="balance-label">Total Savings</div>
+        <div class="balance-amount mono">${fmtMoney(savingsBal)}</div>
+        <div class="balance-sub">Separate from spendable money</div>
+      </div>
+      <div class="card card-pad">
+        <div class="section-title">Savings Flow (all time)</div>
+        <div class="flex justify-between mb-2"><span class="text-muted font-sm">Moved in</span><span class="mono text-positive">${fmtMoney(totalIn)}</span></div>
+        <div class="flex justify-between mb-2"><span class="text-muted font-sm">Brought back</span><span class="mono text-negative">${fmtMoney(totalOut)}</span></div>
+        <div class="flex justify-between mb-2"><span class="text-muted font-sm">Spent directly</span><span class="mono text-negative">${fmtMoney(spentDirect)}</span></div>
+        <div class="flex justify-between" style="border-top:1px solid var(--border);padding-top:8px;margin-top:8px"><span class="font-bold">Net saved</span><span class="mono font-bold text-positive">${fmtMoney(totalIn - totalOut - spentDirect)}</span></div>
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <button class="qa-btn qa-save" onclick="openTxModal({type:'transfer_to_savings'})">
+        <div class="qa-icon">📥</div><div class="qa-title">Move to Savings</div><div class="qa-desc">Spending → Savings</div>
+      </button>
+      <button class="qa-btn qa-back" onclick="openTxModal({type:'return_from_savings'})">
+        <div class="qa-icon">📤</div><div class="qa-title">Bring Back</div><div class="qa-desc">Savings → Spending</div>
+      </button>
+      <button class="qa-btn qa-spend-save" onclick="openTxModal({type:'spend_from_savings'})">
+        <div class="qa-icon">🏦</div><div class="qa-title">Spend From Savings</div><div class="qa-desc">Direct expense</div>
+      </button>
+      <button class="qa-btn" onclick="openEntityModal('goal')">
+        <div class="qa-icon" style="background:#f3e8ff;color:var(--goal)">🎯</div><div class="qa-title">Add Goal</div><div class="qa-desc">Track a target</div>
+      </button>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header" style="justify-content:space-between">
+        <h3>Savings Goals</h3>
+        <button class="btn btn-ghost btn-sm" onclick="openEntityModal('goal')">+ New Goal</button>
+      </div>
+      <div class="card-pad">
+        ${DB.goals.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">🎯</div><div class="empty-state-title">No goals yet</div><div class="empty-state-desc">Goals are just labels for savings — they don\'t move money</div></div>' :
+          DB.goals.map(g => {
+            const pct = g.target_amount ? Math.min(100, (g.assigned_amount / g.target_amount) * 100) : 0;
+            return `
+              <div class="list-item" onclick="openEntityModal('goal','${g.id}')" style="margin-bottom:8px">
+                <div class="list-item-icon" style="background:#f3e8ff;color:var(--goal)">🎯</div>
+                <div class="list-item-content">
+                  <div class="list-item-title">${escapeHtml(g.name)}</div>
+                  <div class="list-item-sub">Assigned ${fmtMoney(g.assigned_amount)} of ${fmtMoney(g.target_amount)}</div>
+                  <div class="bar-track mt-2" style="grid-column:1/-1"><div class="bar-fill" style="width:${pct}%;background:var(--goal)"></div></div>
+                </div>
+                <div class="list-item-amount">${pct.toFixed(0)}%</div>
+              </div>
+            `;
+          }).join('')}
+        <div class="help mt-3">⚠ Goals are just labels — assigning money to a goal does NOT move it. Actual money must be moved via "Move to Savings".</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Savings History</h3></div>
+      ${history.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-title">No savings activity yet</div></div>' :
+        renderTransactionsTable(history)}
+    </div>
+  `;
+};
+
+/* ============================================================
+   PEOPLE VIEW
+   ============================================================ */
+views.people = () => {
+  return `
+    <div class="card mb-4">
+      <div class="card-pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="section-title" style="margin:0">People & Contacts</h3>
+          <button class="btn btn-primary btn-sm" onclick="openEntityModal('person')">+ Add Person</button>
+        </div>
+        <div class="entity-grid">
+          ${DB.people.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">👤</div><div class="empty-state-title">No people yet</div></div>' :
+            DB.people.map(p => {
+              const stats = personStats(p.id);
+              return `
+                <div class="entity-card" onclick="openEntityModal('person','${p.id}')">
+                  <div class="entity-header">
+                    <div class="entity-avatar">${escapeHtml(p.name.charAt(0))}</div>
+                    <div>
+                      <div class="entity-name">${escapeHtml(p.name)}</div>
+                      <div class="entity-type">${p.type}</div>
+                    </div>
+                  </div>
+                  <div class="entity-stats">
+                    <div><div class="entity-stat-label">Received from</div><div class="entity-stat-value text-positive">${fmtMoney(stats.received_from, false)}</div></div>
+                    <div><div class="entity-stat-label">Sent to</div><div class="entity-stat-value text-negative">${fmtMoney(stats.sent_to, false)}</div></div>
+                    <div><div class="entity-stat-label">Net flow</div><div class="entity-stat-value" style="color:${stats.net>=0?'var(--positive)':'var(--negative)'}">${stats.net>=0?'+':''}${fmtMoney(stats.net, false)}</div></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="section-title" style="margin:0">Merchants & Places</h3>
+          <button class="btn btn-primary btn-sm" onclick="openEntityModal('merchant')">+ Add Merchant</button>
+        </div>
+        <div class="entity-grid">
+          ${DB.merchants.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">🏪</div><div class="empty-state-title">No merchants yet</div></div>' :
+            DB.merchants.map(m => {
+              const stats = merchantStats(m.id);
+              return `
+                <div class="entity-card" onclick="openEntityModal('merchant','${m.id}')">
+                  <div class="entity-header">
+                    <div class="entity-avatar">🏪</div>
+                    <div>
+                      <div class="entity-name">${escapeHtml(m.name)}</div>
+                      <div class="entity-type">${m.category_id ? getCategory(m.category_id)?.name : 'uncategorized'}</div>
+                    </div>
+                  </div>
+                  <div class="entity-stats">
+                    <div><div class="entity-stat-label">Total spent</div><div class="entity-stat-value text-negative">${fmtMoney(stats.total, false)}</div></div>
+                    <div><div class="entity-stat-label">Visits</div><div class="entity-stat-value">${stats.count}</div></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+function personStats(personId) {
+  let received_from = 0, sent_to = 0;
+  for (const t of DB.transactions) {
+    if (t.reversed) continue;
+    if (t.person_id !== personId) continue;
+    const pe = personalEffect(enrichTransaction(t));
+    if (pe > 0) received_from += t.amount;
+    else if (pe < 0) sent_to += t.amount;
+    // pass-through counted on both sides but with zero net
+    else if (t.type === 'passthrough_received') received_from += t.amount;
+    else if (t.type === 'passthrough_payment') sent_to += t.amount;
+  }
+  return { received_from, sent_to, net: received_from - sent_to };
+}
+
+function merchantStats(merchantId) {
+  const txs = DB.transactions.filter(t => !t.reversed && t.merchant_id === merchantId);
+  return { total: txs.reduce((s,t)=>s+t.amount,0), count: txs.length };
+}
+
+/* ============================================================
+   REPORTS VIEW
+   ============================================================ */
+let reportMonth = currentMonthKey();
+
+views.reports = () => {
+  const ms = monthStats(reportMonth);
+  const byCat = spendByCategory(reportMonth);
+  const byPerson = spendByPerson(reportMonth);
+  const byMerchant = spendByMerchant(reportMonth);
+  const social = socialSpending(reportMonth);
+  const months = allMonths();
+  const trend = monthlyTrend(6);
+
+  return `
+    <div class="card mb-4">
+      <div class="card-pad">
+        <div class="flex gap-2 items-center" style="justify-content:space-between">
+          <h3 class="section-title" style="margin:0">Reports — ${monthLabel(reportMonth)}</h3>
+          <div class="flex gap-2">
+            <select onchange="reportMonth=this.value; render()">
+              ${months.map(m => `<option value="${m}" ${m===reportMonth?'selected':''}>${monthLabel(m)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-grid">
+      <div class="card">
+        <div class="card-header"><h3>Spending by Category</h3></div>
+        <div class="card-pad">
+          ${byCat.length === 0 ? '<div class="empty-state">No spending this month</div>' :
+            `<div class="bar-chart">${barChart(byCat)}</div>`}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Spending by Person</h3></div>
+        <div class="card-pad">
+          ${byPerson.length === 0 ? '<div class="empty-state">No spending with people this month</div>' :
+            `<div class="bar-chart">${barChart(byPerson.map(p => ({...p, color:'#8b5cf6', icon:'👤'})))}</div>`}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Spending by Merchant</h3></div>
+        <div class="card-pad">
+          ${byMerchant.length === 0 ? '<div class="empty-state">No merchant spending this month</div>' :
+            `<div class="bar-chart">${barChart(byMerchant.map(m => ({...m, color:'#06b6d4', icon:'🏪'})))}</div>`}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Income vs Pass-through</h3></div>
+        <div class="card-pad">
+          <div class="bar-chart">
+            ${(() => { const items = [
+              {name:'Personal income', amount:ms.personal_income, color:'#10b981', icon:'💰'},
+              {name:'  of which allowance', amount:ms.allowance, color:'#22c55e', icon:'·'},
+              {name:'  of which other', amount:ms.other_income, color:'#84cc16', icon:'·'},
+              {name:'  of which reimburse', amount:ms.reimbursements_received, color:'#06b6d4', icon:'·'},
+              {name:'Pass-through in', amount:ms.passthrough_received, color:'#64748b', icon:'🛅'},
+              {name:'Pass-through out', amount:ms.passthrough_paid, color:'#94a3b8', icon:'🛅'},
+              {name:'Personal spending', amount:ms.personal_spending, color:'#ef4444', icon:'💸'},
+            ]; return barChart(items); })()}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Social / Friends Spending</h3></div>
+        <div class="card-pad">
+          ${social.personal === 0 && social.group === 0 ?
+            '<div class="empty-state">No social spending this month</div>' :
+            `<div class="bar-chart">
+              ${barChart([
+                {name:'Personal spend (social cat)', amount:social.personal, color:'#8b5cf6', icon:'👥'},
+                {name:'Pass-through handled', amount:social.group, color:'#64748b', icon:'🛅'},
+                {name:'Friends contributed', amount:social.contributed, color:'#10b981', icon:'💰'},
+              ])}
+            </div>
+            <div class="help mt-3">Distinguishes money you spent personally on social activities from money you merely handled on behalf of friends.</div>`
+          }
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Monthly Trend (6 months)</h3></div>
+        <div class="card-pad">
+          <div class="bar-chart">
+            ${barChart(trend.map(t => ({name:monthLabel(t.month).split(' ')[0], amount:t.spending, color:'#ef4444', icon:'💸'})))}
+          </div>
+          <div class="help mt-3">Comparison: ${trend.length >= 2 ? `This month ${fmtMoney(trend[0].spending, false)} vs last ${fmtMoney(trend[1].spending, false)}` : ''}</div>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+// Render a horizontal bar row. `max` is the largest value in this chart for relative scaling.
+function barRow(label, amount, color, icon, max) {
+  const width = max > 0 ? Math.max(2, (amount / max) * 100) : 0;
+  return `<div class="bar-row">
+    <div class="bar-label">${icon || ''} ${escapeHtml(label)}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:${color}"></div></div>
+    <div class="bar-value">${fmtMoney(amount, false)}</div>
+  </div>`;
+}
+
+// Helper: render a list of bar rows given items [{name, amount, color, icon}]
+function barChart(items) {
+  if (!items.length) return '';
+  const max = Math.max(...items.map(i => i.amount || 0), 1);
+  return items.map(i => barRow(i.name, i.amount, i.color, i.icon, max)).join('');
+}
+
+function spendByCategory(monthKey) {
+  const txs = DB.transactions.filter(t => !t.reversed && t.date.slice(0,7) === monthKey && (t.type === 'expense' || t.type === 'spend_from_savings'));
+  const map = {};
+  txs.forEach(t => {
+    const cid = t.category_id || 'cat_unknown';
+    if (!map[cid]) map[cid] = 0;
+    map[cid] += t.amount;
+  });
+  return Object.entries(map).map(([cid, amount]) => {
+    const c = getCategory(cid) || { name: 'Unknown', color: '#999', icon: '?' };
+    return { name: c.name, amount, color: c.color, icon: c.icon };
+  }).sort((a,b) => b.amount - a.amount);
+}
+
+function spendByPerson(monthKey) {
+  const txs = DB.transactions.filter(t => !t.reversed && t.date.slice(0,7) === monthKey && t.person_id && (t.type === 'expense' || t.type === 'spend_from_savings' || t.type === 'passthrough_payment'));
+  const map = {};
+  txs.forEach(t => {
+    if (!map[t.person_id]) map[t.person_id] = 0;
+    map[t.person_id] += t.amount;
+  });
+  return Object.entries(map).map(([pid, amount]) => {
+    const p = getPerson(pid) || { name: 'Unknown' };
+    return { name: p.name, amount };
+  }).sort((a,b) => b.amount - a.amount);
+}
+
+function spendByMerchant(monthKey) {
+  const txs = DB.transactions.filter(t => !t.reversed && t.date.slice(0,7) === monthKey && t.merchant_id && (t.type === 'expense' || t.type === 'spend_from_savings' || t.type === 'passthrough_payment'));
+  const map = {};
+  txs.forEach(t => {
+    if (!map[t.merchant_id]) map[t.merchant_id] = 0;
+    map[t.merchant_id] += t.amount;
+  });
+  return Object.entries(map).map(([mid, amount]) => {
+    const m = getMerchant(mid) || { name: 'Unknown' };
+    return { name: m.name, amount };
+  }).sort((a,b) => b.amount - a.amount);
+}
+
+function socialSpending(monthKey) {
+  const txs = DB.transactions.filter(t => !t.reversed && t.date.slice(0,7) === monthKey);
+  let personal = 0, group = 0, contributed = 0;
+  for (const t of txs) {
+    const c = t.category_id ? getCategory(t.category_id) : null;
+    if (c && c.is_social && (t.type === 'expense' || t.type === 'spend_from_savings')) personal += t.amount;
+    if (t.type === 'passthrough_received') contributed += t.amount;
+    if (t.type === 'passthrough_payment') group += t.amount;
+  }
+  return { personal, group, contributed };
+}
+
+function monthlyTrend(monthsCount) {
+  const months = allMonths().slice(0, monthsCount).reverse();
+  return months.map(m => ({ month: m, spending: monthStats(m).personal_spending }));
+}
+
+/* ============================================================
+   REVIEW QUEUE
+   ============================================================ */
+views.review = () => {
+  const queue = DB.transactions.filter(t => t.status === 'needs_review' && !t.reversed).sort((a,b)=>b.date.localeCompare(a.date));
+  const unknowns = DB.transactions.filter(t => t.status === 'unknown' && !t.reversed);
+  return `
+    <div class="card mb-4">
+      <div class="card-pad">
+        <h3 class="section-title">Needs Review Queue</h3>
+        <p class="font-sm text-muted mb-3">Transactions that you have not classified yet. Classify each one without destroying the original record.</p>
+        ${queue.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">All caught up</div><div class="empty-state-desc">No transactions need review</div></div>' :
+          queue.map(t => {
+            const acc = getAccount(t.account_id);
+            const type = getType(t.type);
+            return `
+              <div class="review-queue-item">
+                <div class="list-item-icon">${type?.icon || '❓'}</div>
+                <div class="flex-1">
+                  <div class="font-bold">${escapeHtml(t.title)}</div>
+                  <div class="font-sm text-muted">${fmtDate(t.date)} · ${fmtMoney(t.amount)} · ${escapeHtml(acc?.name||'')}</div>
+                </div>
+                <div class="review-actions">
+                  <button onclick="reviewClassify('${t.id}','personal')">💸 Personal</button>
+                  <button onclick="reviewClassify('${t.id}','passthrough')">🛅 Pass-through</button>
+                  <button onclick="reviewClassify('${t.id}','reimbursement')">↩️ Reimbursement</button>
+                  <button onclick="reviewClassify('${t.id}','transfer')">🔁 Transfer</button>
+                  <button onclick="reviewClassify('${t.id}','unknown')">❓ Unknown</button>
+                  <button onclick="openTxModal({id:'${t.id}'})">✏️ Edit</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-pad">
+        <h3 class="section-title">Unknown (${unknowns.length})</h3>
+        <p class="font-sm text-muted mb-3">Transactions marked as Unknown — left as-is, not forced to guess.</p>
+        ${unknowns.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">No unknown transactions</div></div>' :
+          unknowns.map(t => `
+            <div class="review-queue-item">
+              <div class="list-item-icon">❓</div>
+              <div class="flex-1">
+                <div class="font-bold">${escapeHtml(t.title)}</div>
+                <div class="font-sm text-muted">${fmtDate(t.date)} · ${fmtMoney(t.amount)}</div>
+              </div>
+              <div class="review-actions">
+                <button onclick="reviewClassify('${t.id}','personal')">💸 Personal</button>
+                <button onclick="reviewClassify('${t.id}','passthrough')">🛅 Pass-through</button>
+                <button onclick="openTxModal({id:'${t.id}'})">✏️ Edit</button>
+              </div>
+            </div>
+          `).join('')}
+      </div>
+    </div>
+  `;
+};
+
+function reviewClassify(txId, classification) {
+  const t = DB.transactions.find(x => x.id === txId);
+  if (!t) return;
+  const updates = {
+    personal: { type: 'expense', status: 'reviewed' },
+    passthrough: { type: t.amount > 0 ? 'passthrough_payment' : 'passthrough_received', status: 'reviewed' },
+    reimbursement: { type: 'reimbursement_received', status: 'reviewed' },
+    transfer: { type: 'transfer', status: 'reviewed' },
+    unknown: { status: 'unknown' },
+  };
+  Object.assign(t, updates[classification]);
+  t.modified = Date.now();
+  saveDB();
+  render();
+  toast('Classified as ' + classification, 'success');
+}
+
+/* ============================================================
+   SETTINGS VIEW
+   ============================================================ */
+views.settings = () => {
+  return `
+    <div class="card mb-4">
+      <div class="card-pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="section-title" style="margin:0">Settings</h3>
+          <div class="flex gap-2">
+            <button class="btn btn-secondary btn-sm" onclick="exportJSON()">⬇ Export JSON</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importInput').click()">⬆ Import</button>
+            <input type="file" id="importInput" class="hidden" accept=".json,.csv" onchange="importFile(event)">
+            <button class="btn btn-danger btn-sm" onclick="confirmReset()">Reset</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Currency & Display</h3>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Currency code</div>
+              <div class="setting-desc">ISO 4217 — change any time, history is preserved</div>
+            </div>
+            <input type="text" value="${DB.settings.currency}" style="width:120px" onchange="DB.settings.currency=this.value; saveDB()">
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Currency symbol</div>
+              <div class="setting-desc">Shown before/after amounts</div>
+            </div>
+            <input type="text" value="${DB.settings.currency_symbol}" style="width:120px" onchange="DB.settings.currency_symbol=this.value; saveDB(); render()">
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Symbol position</div></div>
+            <select style="width:120px" onchange="DB.settings.currency_position=this.value; saveDB(); render()">
+              <option value="before" ${DB.settings.currency_position==='before'?'selected':''}>Before (Rs 500)</option>
+              <option value="after" ${DB.settings.currency_position==='after'?'selected':''}>After (500 Rs)</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Allow overdrawing accounts</div><div class="setting-desc">If off, the app warns when an account would go negative</div></div>
+            <input type="checkbox" ${DB.settings.overdraft_allowed?'checked':''} onchange="DB.settings.overdraft_allowed=this.checked; saveDB()">
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Theme</div></div>
+            <select onchange="document.documentElement.dataset.theme=this.value; localStorage.setItem('pft_theme', this.value)">
+              <option value="light" ${document.documentElement.dataset.theme==='light'?'selected':''}>Light</option>
+              <option value="dark" ${document.documentElement.dataset.theme==='dark'?'selected':''}>Dark</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Accounts <button class="btn btn-ghost btn-sm" onclick="openEntityModal('account')">+ Add</button></h3>
+          ${DB.accounts.map(a => `
+            <div class="list-item" onclick="openEntityModal('account','${a.id}')" style="margin-bottom:6px">
+              <div class="list-item-icon" style="background:${a.color}22">${a.icon}</div>
+              <div class="flex-1">
+                <div class="font-bold">${escapeHtml(a.name)} ${a.archived?'<span class="badge badge-unknown">archived</span>':''}</div>
+                <div class="font-sm text-muted">${a.type} · ${fmtMoney(accountBalance(a.id))}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="settings-section">
+          <h3>Categories <button class="btn btn-ghost btn-sm" onclick="openEntityModal('category')">+ Add</button></h3>
+          ${DB.categories.map(c => `
+            <div class="list-item" onclick="openEntityModal('category','${c.id}')" style="margin-bottom:6px">
+              <div class="list-item-icon" style="background:${c.color}22">${c.icon}</div>
+              <div class="flex-1">
+                <div class="font-bold">${escapeHtml(c.name)}</div>
+                <div class="font-sm text-muted">${c.is_social?'social category':'regular'}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="settings-section">
+          <h3>Transaction Types <button class="btn btn-ghost btn-sm" onclick="openEntityModal('type')">+ Add</button></h3>
+          ${DB.types.map(t => `
+            <div class="list-item" onclick="openEntityModal('type','${t.id}')" style="margin-bottom:6px">
+              <div class="list-item-icon" style="background:${t.color}22">${t.icon}</div>
+              <div class="flex-1">
+                <div class="font-bold">${escapeHtml(t.label)}</div>
+                <div class="font-sm text-muted">Effect: ${t.personal_effect} · Transfer: ${t.is_transfer?'yes':'no'} · Passthrough: ${t.is_passthrough?'yes':'no'}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="settings-section">
+          <h3>Recurring Transactions <button class="btn btn-ghost btn-sm" onclick="openEntityModal('recurring')">+ Add</button></h3>
+          ${DB.recurring.length === 0 ? '<div class="font-sm text-muted">No recurring transactions</div>' :
+            DB.recurring.map(r => `
+              <div class="list-item" onclick="openEntityModal('recurring','${r.id}')" style="margin-bottom:6px">
+                <div class="list-item-icon">🔁</div>
+                <div class="flex-1">
+                  <div class="font-bold">${escapeHtml(r.description)}</div>
+                  <div class="font-sm text-muted">${r.frequency} · ${fmtMoney(r.amount)} · ${r.active?'active':'paused'}</div>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+
+        <div class="settings-section">
+          <h3>Data Management</h3>
+          <div class="setting-row">
+            <div><div class="setting-label">Re-seed sample data</div><div class="setting-desc">Replace all current data with the demo dataset</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="confirmReseed()">Reset & seed sample</button>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Clear all data</div><div class="setting-desc">Permanently delete every transaction, account, and setting</div></div>
+            <button class="btn btn-danger btn-sm" onclick="confirmReset()">Delete everything</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+/* ============================================================
+   TRANSACTION MODAL
+   ============================================================ */
+function openTxModal(opts) {
+  const isEdit = !!opts.id;
+  const existing = isEdit ? DB.transactions.find(t => t.id === opts.id) : null;
+  const t = existing || Object.assign({
+    id: uid(), date: todayISO(), title: '', amount: 0, type: opts.type || 'expense',
+    account_id: 'acc_spending', to_account_id: null, category_id: null,
+    person_id: null, person_name: '', merchant_id: null, merchant_name: '',
+    tags: [], notes: '', status: 'reviewed',
+  }, opts);
+
+  // Default account based on type
+  if (!isEdit) {
+    if (t.type === 'transfer_to_savings') { t.account_id = 'acc_spending'; t.to_account_id = 'acc_savings'; }
+    else if (t.type === 'return_from_savings') { t.account_id = 'acc_savings'; t.to_account_id = 'acc_spending'; }
+    else if (t.type === 'spend_from_savings') { t.account_id = 'acc_savings'; }
+  }
+
+  $('#txModalTitle').textContent = isEdit ? 'Edit Transaction' : 'Add Transaction';
+  $('#txDuplicateBtn').style.display = isEdit ? '' : 'none';
+  $('#txReverseBtn').style.display = (isEdit && !existing.reversed) ? '' : 'none';
+  $('#txDeleteBtn').style.display = isEdit ? '' : 'none';
+  $('#txSaveBtn').onclick = () => saveTxForm(t.id, isEdit);
+  $('#txDuplicateBtn').onclick = () => { const dup = JSON.parse(JSON.stringify(t)); dup.id = uid(); delete dup.reversed; DB.transactions.push(dup); saveDB(); closeTxModal(); render(); toast('Duplicated'); };
+  $('#txReverseBtn').onclick = () => reverseTx(t.id);
+  $('#txDeleteBtn').onclick = () => deleteTx(t.id);
+
+  renderTxForm(t, isEdit);
+  $('#txModal').classList.add('active');
+}
+
+function closeTxModal() { $('#txModal').classList.remove('active'); }
+
+function renderTxForm(t, isEdit) {
+  const type = getType(t.type);
+  const isTransfer = type?.is_transfer;
+  const isPassthrough = type?.is_passthrough;
+  const needsToAccount = isTransfer;
+  const reimbursableTxs = DB.transactions.filter(x => !x.reversed && x.id !== t.id && (x.type === 'expense' || x.type === 'spend_from_savings'));
+
+  $('#txModalBody').innerHTML = `
+    <div class="type-chips">
+      ${DB.types.map(ty => `
+        <button type="button" class="type-chip ${t.type===ty.id?'active':''}" data-type="${ty.id}" onclick="updateTxType('${ty.id}')">${ty.icon} ${escapeHtml(ty.label)}</button>
+      `).join('')}
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Amount</label>
+        <input type="number" id="txAmount" value="${t.amount||''}" min="0" step="1" placeholder="0" autofocus>
+        <div class="amount-quick">
+          <button type="button" onclick="document.getElementById('txAmount').value=100">100</button>
+          <button type="button" onclick="document.getElementById('txAmount').value=500">500</button>
+          <button type="button" onclick="document.getElementById('txAmount').value=1000">1,000</button>
+          <button type="button" onclick="document.getElementById('txAmount').value=2000">2,000</button>
+          <button type="button" onclick="document.getElementById('txAmount').value=5000">5,000</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="txDate" value="${t.date}">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Note / Title</label>
+      <input type="text" id="txTitle" value="${escapeHtml(t.title)}" placeholder="e.g. Coke with Adil">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>${needsToAccount ? 'From account' : 'Account'}</label>
+        <select id="txAccount">
+          ${DB.accounts.filter(a => !a.archived).map(a => `<option value="${a.id}" ${t.account_id===a.id?'selected':''}>${a.icon} ${escapeHtml(a.name)} (${fmtMoney(accountBalance(a.id), false)})</option>`).join('')}
+        </select>
+      </div>
+      ${needsToAccount ? `
+      <div class="field">
+        <label>To account</label>
+        <select id="txToAccount">
+          ${DB.accounts.filter(a => !a.archived && a.id !== t.account_id).map(a => `<option value="${a.id}" ${t.to_account_id===a.id?'selected':''}>${a.icon} ${escapeHtml(a.name)}</option>`).join('')}
+        </select>
+      </div>` : ''}
+    </div>
+
+    ${!isTransfer ? `
+    <div class="field">
+      <label>Category</label>
+      <select id="txCategory">
+        <option value="">— Select category —</option>
+        ${DB.categories.map(c => `<option value="${c.id}" ${t.category_id===c.id?'selected':''}>${c.icon} ${escapeHtml(c.name)}</option>`).join('')}
+      </select>
+    </div>` : ''}
+
+    <div class="field-row">
+      <div class="field">
+        <label>Person</label>
+        <input type="text" id="txPerson" list="peopleList" value="${escapeHtml(getPerson(t.person_id)?.name || '')}" placeholder="e.g. Adil Khan">
+        <datalist id="peopleList">
+          ${DB.people.map(p => `<option value="${escapeHtml(p.name)}">`).join('')}
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Merchant</label>
+        <input type="text" id="txMerchant" list="merchantsList" value="${escapeHtml(getMerchant(t.merchant_id)?.name || '')}" placeholder="e.g. McDonald's">
+        <datalist id="merchantsList">
+          ${DB.merchants.map(m => `<option value="${escapeHtml(m.name)}">`).join('')}
+        </datalist>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Tags (comma separated)</label>
+      <input type="text" id="txTags" value="${escapeHtml((t.tags||[]).join(', '))}" placeholder="e.g. social, group-order">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Status</label>
+        <select id="txStatus">
+          <option value="reviewed" ${t.status==='reviewed'?'selected':''}>Reviewed</option>
+          <option value="needs_review" ${t.status==='needs_review'?'selected':''}>Needs review</option>
+          <option value="unknown" ${t.status==='unknown'?'selected':''}>Unknown</option>
+        </select>
+      </div>
+      ${t.type === 'reimbursement_received' ? `
+      <div class="field">
+        <label>Reimburses (original expense)</label>
+        <select id="txReimburses">
+          <option value="">— None —</option>
+          ${reimbursableTxs.map(x => `<option value="${x.id}" ${t.reimburses===x.id?'selected':''}>${escapeHtml(x.title)} (${fmtDate(x.date)}, ${fmtMoney(x.amount, false)})</option>`).join('')}
+        </select>
+      </div>` : ''}
+    </div>
+
+    ${isPassthrough ? `
+    <div class="field">
+      <label>Pass-through reason</label>
+      <select id="txPtReason">
+        <option value="pass_through" ${t.passthrough_reason==='pass_through'?'selected':''}>Pass-through</option>
+        <option value="friend_reimbursement" ${t.passthrough_reason==='friend_reimbursement'?'selected':''}>Friend reimbursement</option>
+        <option value="family_reimbursement" ${t.passthrough_reason==='family_reimbursement'?'selected':''}>Family reimbursement</option>
+        <option value="shared_expense" ${t.passthrough_reason==='shared_expense'?'selected':''}>Shared expense contribution</option>
+        <option value="custom" ${t.passthrough_reason==='custom'?'selected':''}>Custom (define in notes)</option>
+      </select>
+    </div>` : ''}
+
+    <div class="advanced-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+      <span>⚙ Advanced fields & notes</span>
+    </div>
+    <div class="advanced-section">
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="txNotes" rows="3" placeholder="Any additional context">${escapeHtml(t.notes || '')}</textarea>
+      </div>
+      ${t.type === 'expense' ? `
+      <div class="field">
+        <label>
+          <input type="checkbox" id="txOnBehalf" ${t.on_behalf_of?'checked':''} onchange="document.getElementById('txOnBehalfPerson').style.display=this.checked?'block':'none'">
+          Paid on behalf of someone else (will be reimbursed)
+        </label>
+        <select id="txOnBehalfPerson" style="margin-top:6px;${t.on_behalf_of?'':'display:none'}">
+          <option value="">— Select person —</option>
+          ${DB.people.map(p => `<option value="${p.id}" ${t.on_behalf_of===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </div>` : ''}
+      ${t.type === 'adjustment' ? `
+      <div class="field-row">
+        <div class="field">
+          <label>Account adjustment (signed)</label>
+          <input type="number" id="txAdjAmount" value="${t.adjustment_amount||0}" step="1">
+          <div class="help">Negative reduces the account balance</div>
+        </div>
+        <div class="field">
+          <label>Personal effect (signed)</label>
+          <input type="number" id="txAdjPersonal" value="${t.adjustment_personal||0}" step="1">
+          <div class="help">How much this changes your personal money</div>
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function updateTxType(typeId) {
+  // Re-render form preserving entered values
+  const collected = collectTxForm();
+  collected.type = typeId;
+  const type = getType(typeId);
+  if (type?.is_transfer && !collected.to_account_id) {
+    if (typeId === 'transfer_to_savings') { collected.account_id = 'acc_spending'; collected.to_account_id = 'acc_savings'; }
+    else if (typeId === 'return_from_savings') { collected.account_id = 'acc_savings'; collected.to_account_id = 'acc_spending'; }
+    else if (typeId === 'cash_withdrawal') { collected.account_id = 'acc_spending'; collected.to_account_id = 'acc_cash'; }
+    else if (typeId === 'cash_deposit') { collected.account_id = 'acc_cash'; collected.to_account_id = 'acc_spending'; }
+  }
+  // re-open with collected
+  openTxModal({ ...collected });
+}
+
+function collectTxForm() {
+  const amount = Number($('#txAmount').value || 0);
+  // Read selected type from the active chip's data attribute
+  const activeChip = $('#txModalBody').querySelector('.type-chip.active');
+  const type = activeChip?.dataset.type || 'expense';
+  return {
+    date: $('#txDate').value,
+    amount,
+    type,
+    title: $('#txTitle').value.trim(),
+    account_id: $('#txAccount')?.value,
+    to_account_id: $('#txToAccount') ? $('#txToAccount').value : null,
+    category_id: $('#txCategory') ? ($('#txCategory').value || null) : null,
+    person_name: $('#txPerson')?.value.trim() || '',
+    merchant_name: $('#txMerchant')?.value.trim() || '',
+    tags: ($('#txTags')?.value || '').split(',').map(s => s.trim()).filter(Boolean),
+    status: $('#txStatus')?.value || 'reviewed',
+    notes: $('#txNotes') ? $('#txNotes').value.trim() : '',
+    reimburses: $('#txReimburses') ? ($('#txReimburses').value || null) : null,
+    passthrough_reason: $('#txPtReason') ? $('#txPtReason').value : null,
+    on_behalf_of: $('#txOnBehalf')?.checked ? ($('#txOnBehalfPerson')?.value || null) : null,
+    adjustment_amount: $('#txAdjAmount') ? Number($('#txAdjAmount').value) : 0,
+    adjustment_personal: $('#txAdjPersonal') ? Number($('#txAdjPersonal').value) : 0,
+  };
+}
+
+function saveTxForm(id, isEdit) {
+  const data = collectTxForm();
+
+  // Validation
+  if (!data.amount || data.amount <= 0) { toast('Enter a valid amount', 'error'); return; }
+  if (!data.date) { toast('Enter a date', 'error'); return; }
+  if (!data.title) { toast('Enter a title', 'error'); return; }
+  if (!data.account_id) { toast('Select an account', 'error'); return; }
+
+  const type = getType(data.type);
+  if (type?.is_transfer && !data.to_account_id) { toast('Select destination account', 'error'); return; }
+  if (type?.is_transfer && data.account_id === data.to_account_id) { toast('From and To accounts must differ', 'error'); return; }
+
+  // Resolve person/merchant
+  let person_id = null;
+  if (data.person_name) person_id = findOrCreatePerson(data.person_name)?.id;
+  let merchant_id = null;
+  if (data.merchant_name) merchant_id = findOrCreateMerchant(data.merchant_name)?.id;
+
+  // Overdraft check
+  if (!DB.settings.overdraft_allowed && (data.type === 'expense' || data.type === 'spend_from_savings' || type?.is_transfer)) {
+    const currentBal = accountBalance(data.account_id);
+    if (data.amount > currentBal) {
+      confirmAction('Overdraft warning', `<p>This transaction will make <strong>${escapeHtml(getAccount(data.account_id).name)}</strong> go negative.</p><p>Current: ${fmtMoney(currentBal)} · After: ${fmtMoney(currentBal - data.amount)}</p><p>Continue anyway?</p>`, () => {
+        doSaveTx(id, isEdit, data, person_id, merchant_id);
+      }, { okLabel: 'Allow overdraft', danger: false });
+      return;
+    }
+  }
+
+  doSaveTx(id, isEdit, data, person_id, merchant_id);
+}
+
+function doSaveTx(id, isEdit, data, person_id, merchant_id) {
+  const existing = DB.transactions.find(t => t.id === id);
+  const now = Date.now();
+  const t = {
+    id,
+    date: data.date,
+    title: data.title,
+    amount: data.amount,
+    type: data.type,
+    account_id: data.account_id,
+    to_account_id: data.to_account_id,
+    category_id: data.category_id,
+    person_id,
+    merchant_id,
+    tags: data.tags,
+    status: data.status,
+    notes: data.notes,
+    reimburses: data.reimburses,
+    passthrough_reason: data.passthrough_reason,
+    on_behalf_of: data.on_behalf_of,
+    adjustment_amount: data.adjustment_amount,
+    adjustment_personal: data.adjustment_personal,
+    created: existing?.created || now,
+    modified: now,
+    reversed: false,
+    _audit: existing ? [...(existing._audit||[]), { at: now, action: 'edited', snapshot: JSON.parse(JSON.stringify(existing)) }] : [],
+  };
+  if (existing) {
+    Object.assign(existing, t);
+  } else {
+    DB.transactions.push(t);
+  }
+  saveDB();
+  closeTxModal();
+  render();
+  toast(isEdit ? 'Transaction updated' : 'Transaction added', 'success');
+}
+
+function reverseTx(id) {
+  const t = DB.transactions.find(x => x.id === id);
+  if (!t) return;
+  confirmAction('Reverse transaction', `<p>This creates a reversing entry that cancels the original without destroying it. The original remains in history.</p><p><strong>${escapeHtml(t.title)}</strong> · ${fmtMoney(t.amount)} · ${fmtDate(t.date)}</p>`, () => {
+    const reversal = JSON.parse(JSON.stringify(t));
+    reversal.id = uid();
+    reversal._is_reversal = true;
+    reversal.reversed = true;
+    reversal.notes = (reversal.notes || '') + ' [REVERSAL]';
+    reversal.created = Date.now();
+    reversal.modified = Date.now();
+    // Negate effect: for transfers keep both accounts, for income/expense mark as reversed
+    if (t.type === 'expense' || t.type === 'spend_from_savings') reversal.type = 'adjustment', reversal.adjustment_amount = t.amount, reversal.adjustment_personal = -t.amount;
+    else if (t.type === 'allowance' || t.type === 'other_income' || t.type === 'reimbursement_received') reversal.type = 'adjustment', reversal.adjustment_amount = -t.amount, reversal.adjustment_personal = t.amount;
+    else if (getType(t.type)?.is_transfer) reversal.type = 'adjustment', reversal.adjustment_amount = 0, reversal.adjustment_personal = 0;
+    // Mark original
+    t.reversed = true;
+    t.reversed_by = reversal.id;
+    t.modified = Date.now();
+    DB.transactions.push(reversal);
+    saveDB();
+    closeTxModal();
+    render();
+    toast('Transaction reversed (original preserved)', 'success');
+  }, { okLabel: 'Reverse', danger: true });
+}
+
+function deleteTx(id) {
+  const t = DB.transactions.find(x => x.id === id);
+  if (!t) return;
+  confirmAction('Delete transaction', `<p>Permanently delete this transaction? This cannot be undone.</p><p><strong>${escapeHtml(t.title)}</strong> · ${fmtMoney(t.amount)} · ${fmtDate(t.date)}</p><p>For safer correction, consider using <em>Reverse</em> instead.</p>`, () => {
+    DB.transactions = DB.transactions.filter(x => x.id !== id);
+    saveDB();
+    closeTxModal();
+    render();
+    toast('Transaction deleted', 'success');
+  }, { okLabel: 'Delete permanently', danger: true });
+}
+
+/* ============================================================
+   ENTITY MODAL (people, merchants, accounts, categories, types, goals)
+   ============================================================ */
+let entityModalCtx = null;
+
+function openEntityModal(kind, id) {
+  entityModalCtx = { kind, id };
+  let entity = null;
+  if (id) entity = ({
+    person: DB.people, merchant: DB.merchants, account: DB.accounts,
+    category: DB.categories, type: DB.types, goal: DB.goals, recurring: DB.recurring,
+  })[kind]?.find(x => x.id === id);
+
+  $('#entityModalTitle').textContent = (id ? 'Edit ' : 'Add ') + kind;
+  $('#entityModalDelete').style.display = id ? '' : 'none';
+
+  if (kind === 'person') {
+    $('#entityModalBody').innerHTML = `
+      <div class="field"><label>Name</label><input type="text" id="ent_name" value="${escapeHtml(entity?.name||'')}"></div>
+      <div class="field"><label>Type</label><select id="ent_type">
+        ${['family','friend','househelp','merchant','other'].map(x => `<option value="${x}" ${entity?.type===x?'selected':''}>${x}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Notes</label><textarea id="ent_notes" rows="2">${escapeHtml(entity?.notes||'')}</textarea></div>
+    `;
+  } else if (kind === 'merchant') {
+    $('#entityModalBody').innerHTML = `
+      <div class="field"><label>Name</label><input type="text" id="ent_name" value="${escapeHtml(entity?.name||'')}"></div>
+      <div class="field"><label>Default category</label><select id="ent_category">
+        <option value="">— None —</option>
+        ${DB.categories.map(c => `<option value="${c.id}" ${entity?.category_id===c.id?'selected':''}>${c.icon} ${escapeHtml(c.name)}</option>`).join('')}
+      </select></div>
+    `;
+  } else if (kind === 'account') {
+    $('#entityModalBody').innerHTML = `
+      <div class="field"><label>Name</label><input type="text" id="ent_name" value="${escapeHtml(entity?.name||'')}"></div>
+      <div class="field"><label>Type</label><select id="ent_type">
+        ${['spending','savings','cash','goal','custom'].map(x => `<option value="${x}" ${entity?.type===x?'selected':''}>${x}</option>`).join('')}
+      </select></div>
+      <div class="field-row"><div class="field"><label>Icon (emoji)</label><input type="text" id="ent_icon" value="${escapeHtml(entity?.icon||'💳')}" maxlength="4"></div>
+      <div class="field"><label>Color</label><input type="color" id="ent_color" value="${entity?.color||'#3b82f6'}"></div></div>
+      <div class="field"><label><input type="checkbox" id="ent_archived" ${entity?.archived?'checked':''}> Archive (hide from new transactions)</label></div>
+    `;
+  } else if (kind === 'category') {
+    $('#entityModalBody').innerHTML = `
+      <div class="field"><label>Name</label><input type="text" id="ent_name" value="${escapeHtml(entity?.name||'')}"></div>
+      <div class="field-row"><div class="field"><label>Icon (emoji)</label><input type="text" id="ent_icon" value="${escapeHtml(entity?.icon||'📦')}" maxlength="4"></div>
+      <div class="field"><label>Color</label><input type="color" id="ent_color" value="${entity?.color||'#64748b'}"></div></div>
+      <div class="field"><label><input type="checkbox" id="ent_social" ${entity?.is_social?'checked':''}> Mark as social category (used in social spending report)</label></div>
+    `;
+  } else if (kind === 'type') {
+    $('#entityModalBody').innerHTML = `
+      <div class="field"><label>Label</label><input type="text" id="ent_label" value="${escapeHtml(entity?.label||'')}"></div>
+      <div class="field-row"><div class="field"><label>Icon (emoji)</label><input type="text" id="ent_icon" value="${escapeHtml(entity?.icon||'⚙')}" maxlength="4"></div>
+      <div class="field"><label>Color</label><input type="color" id="ent_color" value="${entity?.color||'#64748b'}"></div></div>
+      <div class="field"><label>Personal effect</label><select id="ent_pe">
+        ${['positive','negative','zero'].map(x => `<option value="${x}" ${entity?.personal_effect===x?'selected':''}>${x}</option>`).join('')}
+      </select></div>
+      <div class="field"><label><input type="checkbox" id="ent_transfer" ${entity?.is_transfer?'checked':''}> Is a transfer between own accounts</label></div>
+      <div class="field"><label><input type="checkbox" id="ent_passthrough" ${entity?.is_passthrough?'checked':''}> Is a pass-through transaction</label></div>
+    `;
+  } else if (kind === 'goal') {
+    $('#entityModalBody').innerHTML = `
+      <div class="field"><label>Goal name</label><input type="text" id="ent_name" value="${escapeHtml(entity?.name||'')}"></div>
+      <div class="field-row">
+        <div class="field"><label>Target amount</label><input type="number" id="ent_target" value="${entity?.target_amount||0}"></div>
+        <div class="field"><label>Assigned from savings</label><input type="number" id="ent_assigned" value="${entity?.assigned_amount||0}"></div>
+      </div>
+      <div class="help">Assigning money to a goal does NOT move it. Move money via "Move to Savings" first.</div>
+    `;
+  } else if (kind === 'recurring') {
+    $('#entityModalBody').innerHTML = `
+      <div class="field"><label>Description</label><input type="text" id="ent_description" value="${escapeHtml(entity?.description||'')}"></div>
+      <div class="field-row">
+        <div class="field"><label>Type</label><select id="ent_rtype">
+          <option value="allowance" ${entity?.type==='allowance'?'selected':''}>Allowance / Income</option>
+          <option value="expense" ${entity?.type==='expense'?'selected':''}>Expense</option>
+          <option value="transfer_to_savings" ${entity?.type==='transfer_to_savings'?'selected':''}>Transfer to Savings</option>
+        </select></div>
+        <div class="field"><label>Amount</label><input type="number" id="ent_amount" value="${entity?.amount||0}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Frequency</label><select id="ent_freq"><option value="monthly" ${entity?.frequency==='monthly'?'selected':''}>Monthly</option><option value="weekly" ${entity?.frequency==='weekly'?'selected':''}>Weekly</option></select></div>
+        <div class="field"><label>Day of month</label><input type="number" id="ent_day" value="${entity?.day_of_month||1}" min="1" max="28"></div>
+      </div>
+      <div class="field"><label>Account</label><select id="ent_account">${DB.accounts.filter(a=>!a.archived).map(a=>`<option value="${a.id}" ${entity?.account_id===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Category</label><select id="ent_category"><option value="">—</option>${DB.categories.map(c=>`<option value="${c.id}" ${entity?.category_id===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select></div>
+      <div class="field"><label><input type="checkbox" id="ent_active" ${entity?.active??true?'checked':''}> Active</label></div>
+      <div class="help">Recurring transactions are reminders — each month's actual received amount must be entered manually.</div>
+    `;
+  }
+
+  $('#entityModal').classList.add('active');
+}
+
+function saveEntityModal() {
+  const { kind, id } = entityModalCtx;
+  const collections = { person: DB.people, merchant: DB.merchants, account: DB.accounts, category: DB.categories, type: DB.types, goal: DB.goals, recurring: DB.recurring };
+  const arr = collections[kind];
+  let entity = id ? arr.find(x => x.id === id) : null;
+  const isNew = !entity;
+  if (!entity) { entity = { id: uid(), created: Date.now() }; arr.push(entity); }
+
+  if (kind === 'person') {
+    entity.name = $('#ent_name').value.trim();
+    entity.type = $('#ent_type').value;
+    entity.notes = $('#ent_notes').value.trim();
+  } else if (kind === 'merchant') {
+    entity.name = $('#ent_name').value.trim();
+    entity.category_id = $('#ent_category').value || null;
+  } else if (kind === 'account') {
+    entity.name = $('#ent_name').value.trim();
+    entity.type = $('#ent_type').value;
+    entity.icon = $('#ent_icon').value || '💳';
+    entity.color = $('#ent_color').value;
+    entity.archived = $('#ent_archived').checked;
+  } else if (kind === 'category') {
+    entity.name = $('#ent_name').value.trim();
+    entity.icon = $('#ent_icon').value || '📦';
+    entity.color = $('#ent_color').value;
+    entity.is_social = $('#ent_social').checked;
+    if (isNew) entity.order = DB.categories.length + 1;
+  } else if (kind === 'type') {
+    entity.label = $('#ent_label').value.trim();
+    entity.icon = $('#ent_icon').value || '⚙';
+    entity.color = $('#ent_color').value;
+    entity.personal_effect = $('#ent_pe').value;
+    entity.is_transfer = $('#ent_transfer').checked;
+    entity.is_passthrough = $('#ent_passthrough').checked;
+    entity.is_income = entity.personal_effect === 'positive' && !entity.is_passthrough;
+  } else if (kind === 'goal') {
+    entity.name = $('#ent_name').value.trim();
+    entity.target_amount = Number($('#ent_target').value) || 0;
+    entity.assigned_amount = Number($('#ent_assigned').value) || 0;
+    entity.account_id = entity.account_id || 'acc_savings';
+  } else if (kind === 'recurring') {
+    entity.description = $('#ent_description').value.trim();
+    entity.type = $('#ent_rtype').value;
+    entity.amount = Number($('#ent_amount').value) || 0;
+    entity.frequency = $('#ent_freq').value;
+    entity.day_of_month = Number($('#ent_day').value) || 1;
+    entity.account_id = $('#ent_account').value;
+    entity.category_id = $('#ent_category').value || null;
+    entity.active = $('#ent_active').checked;
+  }
+  saveDB();
+  closeEntityModal();
+  render();
+  toast(isNew ? kind + ' added' : kind + ' updated', 'success');
+}
+
+function deleteEntityModal() {
+  const { kind, id } = entityModalCtx;
+  const collections = { person: DB.people, merchant: DB.merchants, account: DB.accounts, category: DB.categories, type: DB.types, goal: DB.goals, recurring: DB.recurring };
+  const arr = collections[kind];
+  confirmAction('Delete ' + kind, `<p>Delete this ${kind}? This cannot be undone.</p>`, () => {
+    const idx = arr.findIndex(x => x.id === id);
+    if (idx >= 0) arr.splice(idx, 1);
+    saveDB();
+    closeEntityModal();
+    render();
+    toast(kind + ' deleted', 'success');
+  }, { okLabel: 'Delete', danger: true });
+}
+
+function closeEntityModal() { $('#entityModal').classList.remove('active'); entityModalCtx = null; }
+
+/* ============================================================
+   IMPORT / EXPORT
+   ============================================================ */
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ledger-backup-${todayISO()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('JSON exported', 'success');
+}
+
+function exportCSV() {
+  const rows = [['date','title','amount','type','account','to_account','category','person','merchant','tags','status','notes']];
+  DB.transactions.forEach(t => {
+    rows.push([
+      t.date, t.title, t.amount, t.type,
+      getAccount(t.account_id)?.name || '',
+      t.to_account_id ? (getAccount(t.to_account_id)?.name || '') : '',
+      t.category_id ? (getCategory(t.category_id)?.name || '') : '',
+      t.person_id ? (getPerson(t.person_id)?.name || '') : '',
+      t.merchant_id ? (getMerchant(t.merchant_id)?.name || '') : '',
+      (t.tags||[]).join('|'),
+      t.status,
+      (t.notes||'').replace(/[\n,]/g, ' '),
+    ]);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ledger-${todayISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV exported', 'success');
+}
+
+function importFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    if (file.name.endsWith('.json')) {
+      try {
+        const data = JSON.parse(e.target.result);
+        confirmAction('Import JSON', `<p>This will replace all current data with the imported file. Continue?</p>`, () => {
+          DB = Object.assign({}, DEFAULTS, data);
+          saveDB();
+          render();
+          toast('JSON imported', 'success');
+        }, { okLabel: 'Import & replace', danger: true });
+      } catch (err) { toast('Invalid JSON file', 'error'); }
+    } else if (file.name.endsWith('.csv')) {
+      const lines = e.target.result.split('\n').filter(Boolean);
+      const parsed = lines.slice(1).map(line => {
+        const cols = line.match(/("[^"]*"|[^,]*)/g)?.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"')) || [];
+        return cols;
+      });
+      const imported = parsed.map(cols => {
+        const account = DB.accounts.find(a => a.name === cols[4]);
+        const toAcc = DB.accounts.find(a => a.name === cols[5]);
+        const cat = DB.categories.find(c => c.name === cols[6]);
+        return {
+          id: uid(), date: cols[0], title: cols[1], amount: Number(cols[2]) || 0, type: cols[3],
+          account_id: account?.id, to_account_id: toAcc?.id, category_id: cat?.id,
+          person_id: cols[7] ? findOrCreatePerson(cols[7])?.id : null,
+          merchant_id: cols[8] ? findOrCreateMerchant(cols[8])?.id : null,
+          tags: cols[9] ? cols[9].split('|') : [], status: cols[10] || 'needs_review', notes: cols[11] || '',
+          created: Date.now(), modified: Date.now(),
+        };
+      });
+      confirmAction('Import CSV', `<p>Will import ${imported.length} transactions as "needs review". Continue?</p>`, () => {
+        DB.transactions.push(...imported);
+        saveDB();
+        render();
+        navigate('review');
+        toast(`Imported ${imported.length} transactions`, 'success');
+      }, { okLabel: 'Import', danger: false });
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function confirmReset() {
+  confirmAction('Delete all data', '<p>This permanently deletes every transaction, account, person, merchant, and setting. There is no recovery.</p><p>Type-aware: export a backup first if unsure.</p>', () => {
+    resetDB();
+    render();
+    toast('All data deleted', 'success');
+  }, { okLabel: 'Delete everything', danger: true });
+}
+
+function confirmReseed() {
+  confirmAction('Reset & seed sample data', '<p>Replace all current data with the demo dataset?</p>', () => {
+    DB = JSON.parse(JSON.stringify(DEFAULTS));
+    seedSampleData();
+    saveDB();
+    render();
+    toast('Sample data loaded', 'success');
+  }, { okLabel: 'Reset & seed', danger: true });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  loadDB();
+  initCloudSync();
+  // theme
+  const savedTheme = localStorage.getItem('pft_theme') || 'light';
+  document.documentElement.dataset.theme = savedTheme;
+  $('#themeToggle').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+  // nav clicks
+  $$('.nav-tab').forEach(t => t.addEventListener('click', () => navigate(t.dataset.view)));
+  // header buttons
+  $('#addTxBtn').onclick = () => openTxModal({ type: 'expense' });
+  $('#fab').onclick = () => openTxModal({ type: 'expense' });
+  $('#themeToggle').onclick = () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('pft_theme', next);
+    $('#themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
+  };
+  $('#exportBtn').onclick = () => exportJSON();
+  // modal closes
+  $('#txModalClose').onclick = closeTxModal;
+  $('#txModalCancel').onclick = closeTxModal;
+  $('#entityModalClose').onclick = closeEntityModal;
+  $('#entityModalCancel').onclick = closeEntityModal;
+  $('#entityModalSave').onclick = saveEntityModal;
+  $('#entityModalDelete').onclick = deleteEntityModal;
+  // close on overlay click
+  $('#txModal').addEventListener('click', (e) => { if (e.target.id === 'txModal') closeTxModal(); });
+  $('#entityModal').addEventListener('click', (e) => { if (e.target.id === 'entityModal') closeEntityModal(); });
+  $('#confirmModal').addEventListener('click', (e) => { if (e.target.id === 'confirmModal') $('#confirmModal').classList.remove('active'); });
+
+  // initial render
+  $('#viewContainer').dataset.view = 'dashboard';
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+// keyboard shortcut: n = new transaction
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openTxModal({ type: 'expense' }); }
+  if (e.key === 'Escape') { closeTxModal(); closeEntityModal(); }
+});
+
+// expose for inline onclicks
+window.navigate = navigate;
+window.openTxModal = openTxModal;
+window.closeTxModal = closeTxModal;
+window.updateTxType = updateTxType;
+window.refreshTxList = refreshTxList;
+window.clearTxFilter = clearTxFilter;
+window.changeMonth = changeMonth;
+window.updateMonthMeta = updateMonthMeta;
+window.openEntityModal = openEntityModal;
+window.closeEntityModal = closeEntityModal;
+window.reviewClassify = reviewClassify;
+window.exportJSON = exportJSON;
+window.exportCSV = exportCSV;
+window.importFile = importFile;
+window.confirmReset = confirmReset;
+window.confirmReseed = confirmReseed;
+window.personalEffect = personalEffect;
+window.enrichTransaction = enrichTransaction;
+window.accountBalance = accountBalance;
+window.totalBalance = totalBalance;
+window.monthStats = monthStats;
+window.accountDeltaFor = accountDeltaFor;
+window.currentMonthKey = currentMonthKey;
+window.saveDB = saveDB;
+</script>
+</body>
+</html>
