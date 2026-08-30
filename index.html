@@ -567,6 +567,19 @@ function setSyncStatus(status) {
   el.textContent = text; el.style.background = bg; el.style.color = color;
 }
 
+const AUTH_EMAIL = "zohaib@zack.com";
+// Your password is NEVER stored in this file. It's typed in once per
+// device and cached only in that device's own browser storage.
+
+function getCachedPassword() {
+  return localStorage.getItem('pft_auth_pw');
+}
+function promptForPassword() {
+  const pw = prompt('Enter your ledger password to sync:');
+  if (pw) localStorage.setItem('pft_auth_pw', pw);
+  return pw;
+}
+
 function initCloudSync() {
   if (!cloudSyncEnabled) { setSyncStatus('offline'); return; }
   firebase.auth().onAuthStateChanged((user) => {
@@ -588,10 +601,18 @@ function initCloudSync() {
       setSyncStatus('offline');
     });
   });
-  firebase.auth().signInAnonymously().catch(err => {
-    console.error('Firebase auth failed:', err);
-    setSyncStatus('offline');
-  });
+
+  function attemptSignIn(password) {
+    firebase.auth().signInWithEmailAndPassword(AUTH_EMAIL, password).catch(err => {
+      console.error('Firebase auth failed:', err);
+      localStorage.removeItem('pft_auth_pw'); // clear a bad cached password
+      setSyncStatus('offline');
+      const retry = promptForPassword();
+      if (retry) attemptSignIn(retry);
+    });
+  }
+  const cached = getCachedPassword();
+  attemptSignIn(cached || promptForPassword());
 }
 
 function pushToCloud() {
@@ -1293,8 +1314,8 @@ views.months = () => {
       </div>
       <div class="month-stat-card">
         <div class="month-stat-label">Savings Movement</div>
-        <div class="month-stat-value mono" style="color:var(--savings)">${fmtMoney(ms.savings_in - ms.savings_out)}</div>
-        <div class="font-xs text-muted mt-2">In ${fmtMoney(ms.savings_in,false)} · Out ${fmtMoney(ms.savings_out,false)}</div>
+        <div class="month-stat-value mono" style="color:var(--savings)">${fmtMoney(ms.savings_in - ms.savings_out - ms.spent_from_savings)}</div>
+        <div class="font-xs text-muted mt-2">In ${fmtMoney(ms.savings_in,false)} · Out ${fmtMoney(ms.savings_out,false)} · Spent ${fmtMoney(ms.spent_from_savings,false)}</div>
       </div>
       <div class="month-stat-card">
         <div class="month-stat-label">Available This Month</div>
