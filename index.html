@@ -535,7 +535,6 @@ const firebaseConfig = {
 let fbReady = false;
 let fbRefPath = null;
 let cloudSyncEnabled = false;
-let suppressNextCloudPush = false;
 
 try {
   if (!firebaseConfig.apiKey.startsWith('PASTE_') && typeof firebase !== 'undefined') {
@@ -577,7 +576,6 @@ function initCloudSync() {
       const cloudData = snapshot.val();
       fbReady = true;
       if (cloudData) {
-        suppressNextCloudPush = true;
         DB = normalizeDB(cloudData);
         localStorage.setItem(STORE_KEY, JSON.stringify(DB));
         if (typeof render === 'function') render();
@@ -598,7 +596,6 @@ function initCloudSync() {
 
 function pushToCloud() {
   if (!cloudSyncEnabled || !fbReady || !fbRefPath) return;
-  if (suppressNextCloudPush) { suppressNextCloudPush = false; return; }
   setSyncStatus('syncing');
   firebase.database().ref(fbRefPath).set(DB)
     .then(() => setSyncStatus('synced'))
