@@ -531,7 +531,6 @@ const firebaseConfig = {
   projectId: "ledger-0007",
   appId: "1:441889062726:web:44219e03d340aad71def47"
 };
-const FIXED_UID = "4LthaF4Ex7YHeF5lgEYMYgYiAI53"; // pins both devices to the same private data folder
 
 let fbReady = false;
 let fbRefPath = null;
@@ -573,8 +572,7 @@ function initCloudSync() {
   if (!cloudSyncEnabled) { setSyncStatus('offline'); return; }
   firebase.auth().onAuthStateChanged((user) => {
     if (!user) return;
-    const uidToUse = FIXED_UID || user.uid;
-    fbRefPath = 'ledger/' + uidToUse;
+    fbRefPath = 'ledger/shared';
     firebase.database().ref(fbRefPath).on('value', (snapshot) => {
       const cloudData = snapshot.val();
       fbReady = true;
